@@ -2,7 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
-
+// In your auth.service.ts, ensure your User interface has an id
+export interface User {
+  id: number;
+  username: string;
+}
 @Injectable({
   providedIn: 'root'
 })
@@ -15,6 +19,9 @@ export class AuthService {
   // Add username subject
   private usernameSubject = new BehaviorSubject<string>(this.getStoredUsername());
   public username$ = this.usernameSubject.asObservable();
+
+  private currentUserSubject = new BehaviorSubject<User | null>(null);
+  public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(private http: HttpClient, private router: Router) { }
 
@@ -38,6 +45,10 @@ export class AuthService {
     return localStorage.getItem('username');
   }
 
+  getCurrentUser(): User | null {
+    return this.currentUserSubject.value;
+  }
+
 
   login(credentials: any): Observable<any> {
     console.log("creaditential",credentials)
@@ -49,6 +60,9 @@ export class AuthService {
 
         if (token) {
           localStorage.setItem('token', token);
+          const user =response.user;
+          this.currentUserSubject.next(user);
+          localStorage.setItem('currentUser', JSON.stringify(user))
           this.isAuthenticatedSubject.next(true);
         }
 
@@ -65,10 +79,14 @@ export class AuthService {
     return this.http.post(`${this.baseUrl}/register`, credentials);
   }
 
-  logout() {
+  logout(): void {
     localStorage.removeItem('token');
-    localStorage.removeItem('username');
-    this.isAuthenticatedSubject.next(false);
-    this.router.navigate(['/login']);
+    localStorage.removeItem('currentUser');
+    this.currentUserSubject.next(null);
+    // Clear all question-related localStorage
+    localStorage.removeItem('saved_questions_backup');
+    localStorage.removeItem('saved_questions_user_id');
+    localStorage.removeItem('saved_questions');
+    localStorage.removeItem('load_question');
   }
 }

@@ -5,6 +5,7 @@ import { SavedQuestion, SavedQuestionsService } from '../../services/saved-Quest
 import { ToastService } from '../../services/toast.service';
 import { connect, Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../services/auth';
 
 @Component({
   selector: 'app-saved-questions',
@@ -465,11 +466,30 @@ export class SavedQuestionsComponent implements OnInit, OnDestroy {
   constructor(
     private savedQuestionsService: SavedQuestionsService,
     private toastService: ToastService,
-    private router: Router
+    private router: Router,
+    private authservice: AuthService
   ) {}
 
   ngOnInit() {
+
+    // Subscribe to user changes
+    this.subscription.add(
+      this.authservice.currentUser$.subscribe(() => {
+        // When user changes, reload questions
+        this.loadSavedQuestions(true); // Force refresh
+      })
+    );
+
     this.loadSavedQuestions();
+        // FIRST: Get current data from service (might be empty if first load)
+    this.savedQuestions = this.savedQuestionsService.getSavedQuestions();
+    this.filteredQuestions = [...this.savedQuestions];
+    
+    // If we have cached data, show it immediately
+    if (this.savedQuestions.length > 0) {
+      this.loading = false;
+    }
+
 
     // Subscribe to changes
     this.subscription.add(
@@ -479,18 +499,25 @@ export class SavedQuestionsComponent implements OnInit, OnDestroy {
         this.loading = false;
       })
     );
+     // FINALLY: Load fresh data from server
+    this.loadSavedQuestions();
   }
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
   }
 
-  loadSavedQuestions() {
-    this.loading = true;
-    this.savedQuestionsService.loadSavedQuestions().subscribe({
+ 
+  loadSavedQuestions( forceRefresh :boolean = false) {
+    // Only show loading if we don't have any data yet
+    if (this.savedQuestions.length === 0) {
+      this.loading = true;
+    }
+    
+    this.savedQuestionsService.loadSavedQuestions(forceRefresh).subscribe({
       next: () => {
         // Data will be updated via the subscription
-        
+        // No need to do anything here as the subscription handles it
       },
       error: (error) => {
         console.error('Error loading saved questions:', error);
