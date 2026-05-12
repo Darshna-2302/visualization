@@ -1,0 +1,21 @@
+<div class="app-container">
+  <mat-toolbar color="primary">
+    <span>Metabase Clone</span>
+    <span class="spacer"></span>
+    
+    <div *ngIf="authService.isAuthenticated$ | async">
+      <button mat-button routerLink="/connections" routerLinkActive="active-link">Connections</button>
+      <button mat-button routerLink="/query" routerLinkActive="active-link">Queries</button>
+      <button mat-icon-button (click)="logout()">
+        <mat-icon>logout</mat-icon>
+      </button>
+    </div>
+    <div *ngIf="!(authService.isAuthenticated$ | async)">
+      <button mat-button routerLink="/login">Login</button>
+    </div>
+  </mat-toolbar>
+
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

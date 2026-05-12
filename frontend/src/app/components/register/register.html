@@ -1,0 +1,27 @@
+<div class="register-container">
+  <mat-card class="register-card">
+    <h2 >Create an account</h2>
+    <form (ngSubmit)="register()">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Username</mat-label>
+        <input matInput name="username" [(ngModel)]="username" required autocomplete="username" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Password</mat-label>
+        <input matInput name="password" [(ngModel)]="password" [type]="showPassword ? 'text' : 'password'" required autocomplete="new-password" />
+        <button mat-icon-button matSuffix type="button" (click)="toggleShow()" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'">
+          <mat-icon>{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <div class="error" *ngIf="error">{{ error }}</div>
+      <div class="success" *ngIf="success">{{ success }}</div>
+
+      <div class="actions">
+        <button mat-flat-button color="primary" type="submit" [disabled]="loading" >{{ loading ? 'Creating...' : 'Register' }}</button>
+        <button mat-button type="button" (click)="goToLogin()">Back to Login</button>
+      </div>
+    </form>
+  </mat-card>
+</div>

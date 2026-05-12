@@ -1,0 +1,163 @@
+<div class="browse-container">
+  <div class="page-header">
+    <h1 class="page-title">Browse Data</h1>
+    <p class="page-description">Explore your database tables</p>
+  </div>
+  
+  <!-- Active Connection Indicator -->
+  <div class="connection-status" *ngIf="activeConnection">
+    <div class="status-indicator connected"></div>
+    <span class="connection-name">{{activeConnection.name}}</span>
+    <span class="connection-detail">{{activeConnection.type}} · {{activeConnection.database}}</span>
+    <span class="connection-tables-count" *ngIf="hasTables()">{{tables.length}} tables</span>
+  </div>
+  
+  <div class="browse-grid">
+    <div class="tables-sidebar">
+      <h3>
+        Tables
+        <span class="table-count" *ngIf="hasTables()">{{tables.length}} tables</span>
+        <span class="table-count" *ngIf="!hasTables() && !isLoadingTables">0 tables</span>
+      </h3>
+      
+      <div *ngIf="!activeConnection" class="no-connection">
+        <span class="material-symbols-outlined">link_off</span>
+        <p>No active connection</p>
+        <small>Go to Connections to select a database</small>
+        <button class="btn-connect" routerLink="/connections">Go to Connections</button>
+      </div>
+      
+      <div *ngIf="isLoadingTables" class="loading-tables">
+        <div class="spinner-small"></div>
+        <p>Loading tables...</p>
+      </div>
+      
+      <div *ngIf="!isLoadingTables && activeConnection && !hasTables()" class="no-tables">
+        <span class="material-symbols-outlined">inbox</span>
+        <p>No tables found</p>
+        <small>This database doesn't have any tables</small>
+        <button class="btn-refresh-tables" (click)="reloadTables()">
+          <span class="material-symbols-outlined">refresh</span>
+          Refresh
+        </button>
+      </div>
+      
+      <div class="table-list" *ngIf="activeConnection && hasTables()">
+        <!-- Debug info - remove in production -->
+        <div class="debug-info" *ngIf="tables.length === 0">
+          <small>Debug: Tables array is empty</small>
+        </div>
+        
+        <button 
+          *ngFor="let table of tables" 
+          [class.active]="selectedTable === table"
+          (click)="selectTable(table)"
+          class="table-btn">
+          <span class="material-symbols-outlined">table_view</span>
+          {{table}}
+        </button>
+      </div>
+    </div>
+    
+    <div class="data-viewer">
+      <div *ngIf="!activeConnection" class="empty-state">
+        <span class="material-symbols-outlined">database</span>
+        <p>No active database connection</p>
+        <p class="empty-subtitle">Go to Connections and select a database to browse</p>
+        <button class="btn-connect" routerLink="/connections">Go to Connections</button>
+      </div>
+      
+      <div *ngIf="activeConnection && !selectedTable && hasTables()" class="empty-state">
+        <span class="material-symbols-outlined">table_view</span>
+        <p>Select a table to view data</p>
+        <p class="empty-subtitle">Choose a table from the left sidebar</p>
+      </div>
+      
+      <div *ngIf="activeConnection && !hasTables() && !isLoadingTables" class="empty-state">
+        <span class="material-symbols-outlined">inbox</span>
+        <p>No tables found</p>
+        <p class="empty-subtitle">This database doesn't have any tables or you don't have permission to view them</p>
+        <button class="btn-refresh-tables" (click)="reloadTables()">
+          <span class="material-symbols-outlined">refresh</span>
+          Refresh Tables
+        </button>
+      </div>
+      
+      <div *ngIf="selectedTable" class="data-container">
+        <div class="data-header">
+          <div class="data-title">
+            <h2>{{selectedTable}}</h2>
+            <span class="row-count-badge">{{totalRows}} rows</span>
+          </div>
+          <div class="data-controls">
+            <div class="search-wrapper">
+              <span class="material-symbols-outlined search-icon">search</span>
+              <input 
+                type="text" 
+                [(ngModel)]="searchTerm"
+                (ngModelChange)="currentPage = 1; cdr.detectChanges()"
+                placeholder="Search rows..." 
+                class="search-input"
+              />
+            </div>
+            <button class="btn-refresh" (click)="refreshData()" title="Refresh">
+              <span class="material-symbols-outlined">refresh</span>
+            </button>
+          </div>
+        </div>
+        
+        <div *ngIf="loading" class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading data...</p>
+        </div>
+        
+        <div *ngIf="!loading && tableData.length > 0" class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th *ngFor="let col of tableColumns" (click)="sortBy(col)">
+                  {{col}}
+                  <span class="sort-icon">
+                    <span class="material-symbols-outlined">{{getSortIcon(col)}}</span>
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of getFilteredAndSortedData()">
+                <td *ngFor="let col of tableColumns">
+                  <span [class.status-badge]="col === 'status' || col === 'Status'" [class]="getStatusClass(row[col])">
+                    {{row[col]}}
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="getFilteredAndSortedData().length === 0 && !loading">
+                <td [attr.colspan]="tableColumns.length" class="no-results">
+                  No matching rows found
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div *ngIf="!loading && tableData.length === 0 && selectedTable" class="empty-table-data">
+          <span class="material-symbols-outlined">database_off</span>
+          <p>No data in this table</p>
+          <p class="empty-subtitle">The table "{{selectedTable}}" is empty</p>
+        </div>
+        
+        <div class="pagination" *ngIf="totalPages > 1 && tableData.length > 0">
+          <button [disabled]="currentPage === 1" (click)="previousPage()">
+            <span class="material-symbols-outlined">chevron_left</span>
+            Previous
+          </button>
+          <span class="page-info">Page {{currentPage}} of {{totalPages}}</span>
+          <button [disabled]="currentPage === totalPages" (click)="nextPage()">
+            Next
+            <span class="material-symbols-outlined">chevron_right</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

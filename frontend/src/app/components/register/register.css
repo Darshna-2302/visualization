@@ -1,0 +1,14 @@
+.register-container { display:flex; align-items:center; justify-content:center; min-height:97vh; padding:24px; }
+.register-card { width:420px; padding:20px; border-radius:10px; }
+.hint { margin-top:12px; color:#475569 }
+.actions { display:flex; justify-content:center; margin-top:18px }
+
+.full-width { width:100% }
+.error { color:#ef4444; text-align:center; margin-top:8px }
+h2{
+    margin-bottom:20px;
+
+}
+button{
+    margin-right:20px;
+}

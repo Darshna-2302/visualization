@@ -1,0 +1,45 @@
+.query-container {
+  margin-top: 20px;
+}
+
+.mb-20 { margin-bottom: 20px; }
+.mt-10 { margin-top: 10px; }
+.mt-20 { margin-top: 20px; }
+.ml-10 { margin-left: 10px; }
+
+.full-width { width: 100%; }
+.flex-1 { flex: 1; }
+
+.header-row {
+  display: flex;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+}
+
+.error-box {
+  padding: 10px;
+  background-color: #ffebee;
+  color: #c62828;
+  border-radius: 4px;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.table-container {
+  max-height: 400px;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+}
+
+.chart-container {
+  height: 400px;
+  width: 100%;
+}

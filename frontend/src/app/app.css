@@ -1,0 +1,13 @@
+.spacer {
+  flex: 1 1 auto;
+}
+
+.active-link {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.main-content {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}

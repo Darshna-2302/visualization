@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Existing EF Core packages -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0-preview.2.efcore.9.0.0" />
+    <PackageReference Include="System.Text.Json" Version="9.0.0" />
+    
+    <!-- Missing packages for services -->
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="7.4.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.4.0" />
+    <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="MySql.Data" Version="9.1.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BIApp.Core\BIApp.Core.csproj" />
+  </ItemGroup>
+
+</Project>

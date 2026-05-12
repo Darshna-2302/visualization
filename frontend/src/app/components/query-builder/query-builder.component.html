@@ -1,0 +1,236 @@
+<div class="query-container">
+  <div class="page-header">
+    <h1 class="page-title">Query Builder</h1>
+    <p class="page-description">Create and run queries against your connected database</p>
+  </div>
+  
+  <!-- Connection Status -->
+  <div class="connection-status" *ngIf="selectedConnection">
+    <div class="status-indicator connected"></div>
+    <span class="connection-name">{{selectedConnection.name}}</span>
+    <span class="connection-detail">{{selectedConnection.type}} · {{selectedConnection.database}}</span>
+  </div>
+  
+  <div *ngIf="!selectedConnection" class="no-connection-warning">
+    <span class="material-symbols-outlined">warning</span>
+    <div>
+      <strong>No active database connection</strong>
+      <p>Please go to Connections and select a database to start querying</p>
+    </div>
+    <button routerLink="/connections" class="btn-connect">Go to Connections</button>
+  </div>
+  
+  <div *ngIf="selectedConnection" class="query-card">
+    <div class="query-header">
+      <div class="tab-buttons">
+        <button [class.active]="activeTab === 'visual'" (click)="activeTab = 'visual'" class="tab-btn">
+          <span class="material-symbols-outlined">build</span>
+          Visual Builder
+        </button>
+        <button [class.active]="activeTab === 'sql'" (click)="activeTab = 'sql'" class="tab-btn">
+          <span class="material-symbols-outlined">code</span>
+          Native SQL
+        </button>
+      </div>
+      <div class="query-actions">
+        <button class="btn-secondary" (click)="saveQuestion()">
+          <span class="material-symbols-outlined">save</span>
+          Save
+        </button>
+        <button class="btn-primary" (click)="activeTab === 'visual' ? runQuery() : runSqlQuery()" [disabled]="loading">
+          <span class="material-symbols-outlined">{{loading ? 'hourglass_empty' : 'play_arrow'}}</span>
+          {{loading ? 'Running...' : 'Run Query'}}
+        </button>
+      </div>
+    </div>
+    
+    <div class="query-editor">
+      <!-- SQL Editor -->
+      <div *ngIf="activeTab === 'sql'" class="sql-editor">
+        <div class="sql-header">
+          <span class="sql-label">SQL Query</span>
+          <button class="btn-reset" (click)="sqlQuery = 'SELECT * FROM orders LIMIT 10'">
+            <span class="material-symbols-outlined">restart_alt</span>
+            Reset
+          </button>
+        </div>
+        <textarea 
+          [(ngModel)]="sqlQuery"
+          placeholder="SELECT * FROM orders WHERE status = 'paid'"
+          class="sql-textarea"
+          rows="8"
+        ></textarea>
+      </div>
+      
+      <!-- Visual Builder -->
+      <div *ngIf="activeTab === 'visual'" class="visual-builder">
+        <div class="builder-grid">
+          <!-- Tables & Columns Section -->
+          <div class="builder-section">
+            <h4>
+              <span class="material-symbols-outlined">table_view</span>
+              Data Source
+            </h4>
+            <div class="form-group">
+              <label>Select Table</label>
+              <select [(ngModel)]="selectedTable" (ngModelChange)="onTableChange()" class="form-select">
+                <option *ngFor="let table of tables" [value]="table">{{table}}</option>
+              </select>
+            </div>
+            
+            <div class="columns-list">
+              <label>Select Columns</label>
+              <div class="checkbox-group" *ngFor="let col of columns; trackBy: trackByColumnName">
+                <label>
+                  <input type="checkbox" [(ngModel)]="col.selected" />
+                  <span class="column-name">{{col.name}}</span>
+                  <span class="column-type" [class]="col.type">{{col.type}}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Filters Section -->
+          <div class="builder-section">
+            <h4>
+              <span class="material-symbols-outlined">filter_alt</span>
+              Filters
+            </h4>
+            <div *ngFor="let filter of filters; let i = index" class="filter-row">
+              <select [(ngModel)]="filter.column" class="form-select-sm">
+                <option value="">Select column</option>
+                <option *ngFor="let col of availableColumns" [value]="col.name">{{col.name}}</option>
+              </select>
+              <select [(ngModel)]="filter.operator" class="form-select-sm">
+                <option value="=">=</option>
+                <option value=">">&gt;</option>
+                <option value="<">&lt;</option>
+                <option value="contains">contains</option>
+              </select>
+              <input [(ngModel)]="filter.value" placeholder="Value" class="form-input-sm" />
+              <button (click)="removeFilter(i)" class="btn-icon" title="Remove filter">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <button (click)="addFilter()" class="btn-link">
+              <span class="material-symbols-outlined">add</span>
+              Add Filter
+            </button>
+          </div>
+          
+          <!-- Aggregation & Visualization Section -->
+          <div class="builder-section">
+            <h4>
+              <span class="material-symbols-outlined">bar_chart</span>
+              Summarize & Visualize
+            </h4>
+            
+            <div class="form-group">
+              <label>Group By</label>
+              <select [(ngModel)]="groupBy" class="form-select">
+                <option value="">No grouping</option>
+                <option *ngFor="let col of availableColumns" [value]="col.name">{{col.name}}</option>
+              </select>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label>Metric</label>
+                <select [(ngModel)]="metric" class="form-select">
+                  <option value="count">Count</option>
+                  <option value="sum">Sum</option>
+                  <option value="avg">Average</option>
+                </select>
+              </div>
+              <div class="form-group" *ngIf="metric !== 'count'">
+                <label>Column</label>
+                <select [(ngModel)]="metricColumn" class="form-select">
+                  <option value="">Select column</option>
+                  <option *ngFor="let col of numericColumns" [value]="col.name">{{col.name}}</option>
+                </select>
+              </div>
+            </div>
+
+            
+            
+            <div class="chart-type-selector">
+              <label>Visualization Type</label>
+              <div class="chart-buttons">
+                <button 
+                  *ngFor="let type of chartTypes" 
+                  [class.active]="chartType === type.value"
+                  (click)="onChartTypeChange(type.value)"
+                  class="chart-btn"
+                  [title]="type.label">
+                  <span class="material-symbols-outlined">{{type.icon}}</span>
+                  <span>{{type.label}}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Query Results -->
+    <div class="query-results" *ngIf="results">
+      <div class="results-header">
+        <div class="results-info">
+          <h4>Results</h4>
+          <span class="results-stats">{{results.rowCount}} rows · {{results.executionTime.toFixed(0)}}ms</span>
+        </div>
+        <div class="results-actions" >
+
+         
+        </div>
+      </div>
+      
+      
+
+<!-- Table view -->
+<div class="table-responsive" *ngIf="!showChart && resultsRows.length">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th *ngFor="let col of resultsColumns">{{ formatColumnName(col) }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let row of resultsRows; trackBy: trackByIndex">
+        <td *ngFor="let col of resultsColumns">
+          <span [class]="getStatusClass(row[col])">{{ row[col] }}</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+      
+      <!-- Chart Visualization -->
+      <div *ngIf="showChart" class="chart-container">
+  <!-- Replace your chart component usage with: -->
+<app-vega-chart *ngIf="showChart"
+  [data]="chartData"
+  [chartType]="chartType"
+  [xAxis]="xAxisField"
+  [yAxis]="yAxisField"
+  [groupBy]="groupBy"
+  [title]="chartTitle"
+  [metric]="metric"
+  [metricColumn]="metricColumn">
+</app-vega-chart>
+</div>
+
+<div *ngIf="chartType !== 'table' && (!results || !results.rows || results.rows.length === 0)" class="no-data-message">
+  No data available for visualization
+</div>
+    </div>
+    
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Running query...</p>
+    </div>
+  </div>
+
+
+</div>

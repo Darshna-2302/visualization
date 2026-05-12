@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="BIApp.API/BIApp.API.csproj" />
+  <Project Path="BIApp.Core/BIApp.Core.csproj" />
+  <Project Path="BIApp.Infrastructure/BIApp.Infrastructure.csproj" />
+</Solution>

@@ -1,0 +1,258 @@
+<div class="connections-container">
+  <!-- Hero Section -->
+  <div class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Database Connections</h1>
+      <p class="hero-description">Connect, manage, and monitor your data sources in one central hub</p>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-card">
+        <span class="stat-value">{{connections.length}}</span>
+        <span class="stat-label">Active Connections</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value">{{getTotalTables()}}</span>
+        <span class="stat-label">Tables Available</span>
+      </div>
+      
+    </div>
+  </div>
+
+  <div class="connections-grid">
+    <!-- Connections List Section -->
+    <div class="connections-list-section">
+      <div class="section-header">
+        <div class="header-left">
+          <span class="material-symbols-outlined">storage</span>
+          <h2>Data Sources</h2>
+        </div>
+       
+      </div>
+
+      <div class="connections-cards">
+        <div *ngFor="let conn of connections" class="connection-card" [class.active]="activeConnectionId === conn.id" [class.connected]="conn.status === 'Connected'">
+          <div class="card-status">
+            <div class="status-indicator" [class.connected]="conn.status === 'Connected'"></div>
+          </div>
+          <div class="card-icon">
+            <div class="icon-wrapper" [ngStyle]="{'background': getConnectionColor(conn.type)}">
+              <span class="material-symbols-outlined">{{getConnectionIcon(conn.type)}}</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="card-header">
+              <h3 class="connection-name">{{conn.name}}</h3>
+              <span class="connection-type">{{conn.type}}</span>
+            </div>
+            <div class="connection-details">
+              <div class="detail-item">
+                <span class="material-symbols-outlined">dns</span>
+                <span>{{conn.server}}</span>
+              </div>
+              <div class="detail-item">
+                <span class="material-symbols-outlined">storage</span>
+                <span>{{conn.database}}</span>
+              </div>
+            </div>
+            <div class="card-footer">
+              <div class="tables-count">
+                <span class="material-symbols-outlined">table_view</span>
+                <span>{{conn.tables?.length || 0}} tables</span>
+              </div>
+              <div class="card-actions">
+                <button class="action-btn connect-btn" (click)="setActiveConnection(conn)" [class.active]="activeConnectionId === conn.id" title="Set as active">
+                  <span class="material-symbols-outlined">{{activeConnectionId === conn.id ? 'check_circle' : 'link'}}</span>
+                </button>
+                <button class="action-btn browse-btn" (click)="browseConnection(conn)" title="Browse data">
+                  <span class="material-symbols-outlined">table_view</span>
+                </button>
+                <button class="action-btn refresh-btn" (click)="refreshConnectionTables(conn.id)" title="Refresh tables">
+    <span class="material-symbols-outlined">refresh</span>
+  </button>
+                <button class="action-btn delete-btn" (click)="deleteConnection(conn.id)" title="Delete connection">
+                  <span class="material-symbols-outlined">delete_outline</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="connections.length === 0" class="empty-state">
+          <span class="material-symbols-outlined">database</span>
+          <p>No connections yet</p>
+          <p class="empty-subtitle">Create your first database connection to get started</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- New Connection Form Section -->
+    <div class="new-connection-section" id="new-connection-form">
+      <div class="section-header">
+        <div class="header-left">
+           <button class="btn-add-connection" (click)="scrollToForm()">
+          <span class="material-symbols-outlined  ">add_circle</span>
+          New Connection
+        </button>
+         
+        </div>
+      </div>
+
+      <div class="form-container">
+        <form (ngSubmit)="saveConnection()" class="connection-form">
+          <!-- Basic Information -->
+          <div class="form-group full-width">
+            <label>
+              <span class="material-symbols-outlined">drive_file_rename_outline</span>
+              Connection Name
+            </label>
+            <input 
+              type="text" 
+              [(ngModel)]="newConnection.name"
+              name="name"
+              placeholder="e.g., Production Database, Analytics Warehouse"
+              class="form-input"
+              required
+            />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>
+                <span class="material-symbols-outlined">database</span>
+                Database Type
+              </label>
+              <div class="select-wrapper">
+                <select [(ngModel)]="newConnection.type" name="type" class="form-select">
+                  <option value="PostgreSQL">PostgreSQL</option>
+                  <option value="MySQL">MySQL</option>
+                  <option value="SQL Server">SQL Server</option>
+                  <option value="MongoDB">MongoDB</option>
+                  <option value="BigQuery">BigQuery</option>
+                  <option value="Snowflake">Snowflake</option>
+                  <option value="Redshift">Redshift</option>
+                </select>
+                <span class="material-symbols-outlined select-arrow">expand_more</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <span class="material-symbols-outlined">dns</span>
+                Host / Server
+              </label>
+              <input 
+                type="text" 
+                [(ngModel)]="newConnection.server"
+                name="server"
+                placeholder="localhost or database.example.com"
+                class="form-input"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>
+                <span class="material-symbols-outlined">numbers</span>
+                Port
+              </label>
+              <input 
+                type="text" 
+                [(ngModel)]="newConnection.port"
+                name="port"
+                placeholder="5432"
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>
+                <span class="material-symbols-outlined">storage</span>
+                Database Name
+              </label>
+              <input 
+                type="text" 
+                [(ngModel)]="newConnection.database"
+                name="database"
+                placeholder="database_name"
+                class="form-input"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- Authentication Section -->
+          <div class="auth-section">
+            <div class="auth-header">
+              <span class="material-symbols-outlined">lock</span>
+              <span>Authentication</span>
+              <span class="auth-badge">Secure</span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>
+                  <span class="material-symbols-outlined">person</span>
+                  Username
+                </label>
+                <input 
+                  type="text" 
+                  [(ngModel)]="newConnection.username"
+                  name="username"
+                  placeholder="db_user"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <span class="material-symbols-outlined">key</span>
+                  Password
+                </label>
+                <div class="password-wrapper">
+                  <input 
+                    [type]="showPassword ? 'text' : 'password'"
+                    [(ngModel)]="newConnection.password"
+                    name="password"
+                    placeholder="••••••••"
+                    class="form-input"
+                  />
+                  <span class="material-symbols-outlined password-toggle" (click)="togglePassword()">
+                    {{showPassword ? 'visibility_off' : 'visibility'}}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Additional Options -->
+           
+          </div>
+
+          <!-- Form Actions -->
+          <div class="form-actions">
+            <button type="button" class="btn-test" (click)="testConnection()">
+              <span class="material-symbols-outlined">sync</span>
+              Test Connection
+            </button>
+            <button type="submit" class="btn-save">
+              <span class="material-symbols-outlined">save</span>
+              Save Connection
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Tips Section -->
+ 
+
+
+<!-- Toast Notifications -->
+<div class="toast-container">
+  <div *ngFor="let toast of toasts" class="toast" [class]="toast.type">
+    <span class="toast-icon">{{toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : 'ℹ'}}</span>
+    {{toast.message}}
+  </div>
+</div>
