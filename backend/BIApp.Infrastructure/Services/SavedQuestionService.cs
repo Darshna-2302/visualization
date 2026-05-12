@@ -42,6 +42,8 @@ public class SavedQuestionService : ISavedQuestionService
                 ChartType = q.ChartType,
                 Filters = string.IsNullOrEmpty(q.FiltersJson) ? null : JsonSerializer.Deserialize<List<FilterDto>>(q.FiltersJson),
                 SelectedColumns = string.IsNullOrEmpty(q.SelectedColumnsJson) ? null : JsonSerializer.Deserialize<List<string>>(q.SelectedColumnsJson),
+                ConnectionId = q.ConnectionId,
+                ConnectionName = q.ConnectionName,
                 CreatedAt = q.CreatedAt,
                 UserId = q.UserId
             });
@@ -75,6 +77,8 @@ public class SavedQuestionService : ISavedQuestionService
                 ChartType = question.ChartType,
                 Filters = string.IsNullOrEmpty(question.FiltersJson) ? null : JsonSerializer.Deserialize<List<FilterDto>>(question.FiltersJson),
                 SelectedColumns = string.IsNullOrEmpty(question.SelectedColumnsJson) ? null : JsonSerializer.Deserialize<List<string>>(question.SelectedColumnsJson),
+                ConnectionId = question.ConnectionId,
+                ConnectionName = question.ConnectionName,
                 CreatedAt = question.CreatedAt,
                 UserId = question.UserId
             };
@@ -101,6 +105,8 @@ public class SavedQuestionService : ISavedQuestionService
                 Metric = dto.Metric,
                 MetricColumn = dto.MetricColumn,
                 ChartType = dto.ChartType,
+                ConnectionId = dto.ConnectionId,
+                ConnectionName = dto.ConnectionName,
                 FiltersJson = dto.Filters != null ? JsonSerializer.Serialize(dto.Filters) : null,
                 SelectedColumnsJson = dto.SelectedColumns != null ? JsonSerializer.Serialize(dto.SelectedColumns) : null,
                 CreatedAt = DateTime.UtcNow
@@ -122,6 +128,8 @@ public class SavedQuestionService : ISavedQuestionService
                 ChartType = savedQuestion.ChartType,
                 Filters = dto.Filters,
                 SelectedColumns = dto.SelectedColumns,
+                ConnectionId = savedQuestion.ConnectionId,
+                ConnectionName = savedQuestion.ConnectionName,
                 CreatedAt = savedQuestion.CreatedAt,
                 UserId = savedQuestion.UserId
             };
@@ -170,6 +178,8 @@ public class SavedQuestionService : ISavedQuestionService
             question.Metric = dto.Metric;
             question.MetricColumn = dto.MetricColumn;
             question.ChartType = dto.ChartType;
+            question.ConnectionId = dto.ConnectionId;
+            question.ConnectionName = dto.ConnectionName;
             question.FiltersJson = dto.Filters != null ? JsonSerializer.Serialize(dto.Filters) : null;
             question.SelectedColumnsJson = dto.SelectedColumns != null ? JsonSerializer.Serialize(dto.SelectedColumns) : null;
 

@@ -30,6 +30,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.FiltersJson).HasColumnName("FiltersJson");
             entity.Property(e => e.SelectedColumnsJson).HasColumnName("SelectedColumnsJson");
             entity.Property(e => e.CreatedAt).HasColumnName("SavedAt");
+            entity.Property(e => e.ConnectionId).HasColumnName("ConnectionId");
+            entity.Property(e => e.ConnectionName).HasMaxLength(200).HasColumnName("ConnectionName");
             
             entity.HasOne(e => e.User)
                   .WithMany()

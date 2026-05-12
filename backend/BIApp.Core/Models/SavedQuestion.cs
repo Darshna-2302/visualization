@@ -18,6 +18,8 @@ public class SavedQuestion
     public string? FiltersJson { get; set; } // Store filters as JSON
     public string? SelectedColumnsJson { get; set; } // Store selected columns as JSON
     public DateTime CreatedAt { get; set; }
+    public int? ConnectionId { get; set; }
+    public string? ConnectionName { get; set; }
     
     public User User { get; set; } = null!;
 }

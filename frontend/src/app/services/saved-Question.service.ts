@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, tap, throwError, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { AuthService } from './auth';
 
@@ -17,6 +17,8 @@ export interface SavedQuestion {
   chartType?: string;
   filters?: any[];
   selectedColumns?: string[];
+  connectionId?: number;
+  connectionName?: string;
   createdAt: string;
   userId: number;
 }
@@ -49,8 +51,39 @@ export class SavedQuestionsService {
   loadSavedQuestions(): Observable<SavedQuestion[]> {
     console.log('Loading saved questions...');
     return this.http.get<SavedQuestion[]>(this.apiUrl, { headers: this.getHeaders() }).pipe(
+      map((questions) => {
+        const serverRaw = (questions || []) as any[];
+        if (serverRaw.length > 0) {
+          // Normalize server response (API uses PascalCase) to the frontend shape (camelCase)
+          const server = serverRaw.map(q => ({
+            id: q.Id ?? q.id,
+            name: q.Name ?? q.name,
+            type: q.Type ?? q.type,
+            query: q.Query ?? q.query,
+            table: q.TableName ?? q.tableName ?? q.table,
+            tableName: q.TableName ?? q.tableName ?? q.table,
+            groupBy: q.GroupBy ?? q.groupBy,
+            metric: q.Metric ?? q.metric,
+            metricColumn: q.MetricColumn ?? q.metricColumn,
+            chartType: q.ChartType ?? q.chartType,
+            filters: q.Filters ?? q.filters ?? (q.FiltersJson ? JSON.parse(q.FiltersJson) : undefined),
+            selectedColumns: q.SelectedColumns ?? q.selectedColumns ?? (q.SelectedColumnsJson ? JSON.parse(q.SelectedColumnsJson) : undefined),
+            connectionId: q.ConnectionId ?? q.connectionId,
+            connectionName: q.ConnectionName ?? q.connectionName,
+            createdAt: (q.CreatedAt ?? q.createdAt)?.toString() ?? new Date().toISOString(),
+            userId: q.UserId ?? q.userId ?? 0
+          })) as SavedQuestion[];
+
+          // If server returned items, prefer server list (authoritative)
+          return server.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        }
+        // If server returned empty, fall back to local saved questions
+        const local = JSON.parse(localStorage.getItem('saved_questions') || '[]') as SavedQuestion[];
+        const uniqLocal = Array.from(new Map((local || []).map(l => [l.id ?? l.createdAt ?? JSON.stringify(l), l])).values());
+        return uniqLocal.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      }),
       tap(questions => {
-        console.log('Questions loaded:', questions);
+        console.log('Questions loaded (server-preferred or local fallback):', questions);
         this.savedQuestionsSubject.next(questions);
       }),
       catchError(error => {
@@ -58,6 +91,10 @@ export class SavedQuestionsService {
         if (error.status === 401) {
           this.authService.logout();
         }
+        // fallback to local saved questions (deduped)
+        const local = JSON.parse(localStorage.getItem('saved_questions') || '[]') as SavedQuestion[];
+        const uniqLocal = Array.from(new Map((local || []).map(l => [l.id ?? l.createdAt ?? JSON.stringify(l), l])).values());
+        this.savedQuestionsSubject.next(uniqLocal);
         return throwError(() => error);
       })
     );
@@ -91,7 +128,19 @@ export class SavedQuestionsService {
       }),
       catchError(error => {
         console.error('Error deleting question:', error);
-        return throwError(() => error);
+        // If backend delete failed, attempt to remove from local storage and update subject
+        try {
+          const local = JSON.parse(localStorage.getItem('saved_questions') || '[]') as SavedQuestion[];
+          const filteredLocal = local.filter(q => q.id !== id);
+          localStorage.setItem('saved_questions', JSON.stringify(filteredLocal));
+          // Update in-memory subject as well
+          const currentQuestions = this.savedQuestionsSubject.value;
+          const filteredQuestions = currentQuestions.filter(q => q.id !== id);
+          this.savedQuestionsSubject.next(filteredQuestions);
+        } catch (e) {
+          // ignore
+        }
+        return of(void 0);
       })
     );
   }

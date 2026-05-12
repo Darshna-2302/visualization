@@ -16,6 +16,8 @@ public class SavedQuestionDto
     public string? ChartType { get; set; }
     public List<FilterDto>? Filters { get; set; }
     public List<string>? SelectedColumns { get; set; }
+    public int? ConnectionId { get; set; }
+    public string? ConnectionName { get; set; }
     public DateTime CreatedAt { get; set; }
     public int UserId { get; set; }
 }
@@ -32,6 +34,8 @@ public class CreateSavedQuestionDto
     public string? ChartType { get; set; }
     public List<FilterDto>? Filters { get; set; }
     public List<string>? SelectedColumns { get; set; }
+    public int? ConnectionId { get; set; }
+    public string? ConnectionName { get; set; }
 }
 
 public class FilterDto

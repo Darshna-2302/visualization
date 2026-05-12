@@ -9,3 +9,4 @@ C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.Core\obj
 C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.Core\obj\Debug\net9.0\refint\BIApp.Core.dll
 C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.Core\obj\Debug\net9.0\BIApp.Core.pdb
 C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.Core\obj\Debug\net9.0\ref\BIApp.Core.dll
+C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.Core\obj\Debug\net9.0\BIApp.Core.sourcelink.json

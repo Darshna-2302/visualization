@@ -207,3 +207,4 @@ C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.API\obj\
 C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.API\obj\Debug\net10.0\BIApp.API.pdb
 C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.API\obj\Debug\net10.0\BIApp.API.genruntimeconfig.cache
 C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.API\obj\Debug\net10.0\ref\BIApp.API.dll
+C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.API\obj\Debug\net10.0\BIApp.API.sourcelink.json

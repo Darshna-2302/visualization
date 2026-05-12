@@ -169,7 +169,7 @@ private runQueryAfterLoad(question: any) {
 //   }
 // }
 
-private checkForSavedQuestion() {
+private checkForSavedQuestion(attempt = 0) {
   const loadData = localStorage.getItem('load_question');
   if (loadData) {
     try {
@@ -183,28 +183,127 @@ private checkForSavedQuestion() {
       this.groupBy = question.groupBy || '';
       this.metric = question.metric || 'count';
       this.metricColumn = question.metricColumn || '';
-      this.chartType = question.chartType || 'table';
+      // Ensure saved chart type is valid; default to 'bar' for visual questions
+      const validChartTypes = ['table', 'bar', 'line', 'pie', 'area', 'scatter'];
+      if (question.chartType && validChartTypes.includes(question.chartType)) {
+        this.chartType = question.chartType;
+      } else if (question.type === 'visual') {
+        this.chartType = 'bar';
+      } else {
+        this.chartType = 'table';
+      }
       
       // Clear the stored data immediately to prevent reloading
       localStorage.removeItem('load_question');
       
       // If it's a visual builder question, set filters and selected columns
       if (question.type === 'visual') {
-        // Set filters if they exist
-        if (question.filters && Array.isArray(question.filters) && question.filters.length > 0) {
+        // Set filters if they exist (accept empty array)
+        if (question.filters && Array.isArray(question.filters)) {
           this.filters = question.filters;
         } else {
           this.filters = [];
         }
-        
+
         const selectedColumnsToApply = question.selectedColumns || [];
         console.log("Columns to apply:", selectedColumnsToApply);
-        
-        // Load columns first, then run query
-        if (this.selectedTable && this.selectedConnection) {
-          this.loadColumnsForSavedQuestion(selectedColumnsToApply);
+        // If the saved question specifies a connection, try to set it active
+        const connId = (question as any).connectionId;
+        const connName = (question as any).connectionName;
+
+        if (connId || connName) {
+          const connsSub = this.dbService.getConnections().subscribe(conns => {
+            const match = conns.find(c => (connId && c.id === connId) || (connName && c.name === connName));
+                if (match) {
+                  // set the active connection then wait for the activeConnection$ to emit
+                  this.dbService.setActiveConnection(match);
+                  let activeSub: Subscription | undefined = undefined;
+                  activeSub = this.dbService.activeConnection$.subscribe(ac => {
+                    if (ac && ac.id === match.id) {
+                      // now safe to load tables/columns for this connection
+                      this.selectedConnection = match;
+                      this.loadTables();
+
+                      // ensure selectedTable is valid for this connection
+                      setTimeout(() => {
+                        if (this.selectedTable && this.tables.includes(this.selectedTable)) {
+                          this.loadColumnsForSavedQuestion(selectedColumnsToApply);
+                        } else if (this.tables && this.tables.length > 0) {
+                          // use saved table if present in tables, otherwise default to first
+                          if (question.table && this.tables.includes(question.table)) {
+                            this.selectedTable = question.table;
+                          } else {
+                            this.selectedTable = this.tables[0];
+                          }
+                          this.loadColumnsForSavedQuestion(selectedColumnsToApply);
+                        }
+                      }, 300);
+
+                      if (activeSub) {
+                        activeSub.unsubscribe();
+                      }
+                    }
+                  });
+                  if (activeSub) this.subscriptions.add(activeSub);
+            } else {
+              // No matching connection; behave like no-connection case
+              if ((!this.tables || this.tables.length === 0) && attempt < 10) {
+                setTimeout(() => this.checkForSavedQuestion(attempt + 1), 300);
+                return;
+              }
+              if (this.selectedTable && this.selectedConnection) {
+                this.loadColumnsForSavedQuestion(selectedColumnsToApply);
+              } else {
+                this.toastService.showToast('Please select a database connection first', 'error');
+              }
+            }
+          });
+          this.subscriptions.add(connsSub);
         } else {
-          this.toastService.showToast('Please select a database connection first', 'error');
+          // No connection specified on saved question — try to find which connection contains the saved table
+          if (question.table || question.tableName) {
+            const tableToFind = question.table || question.tableName;
+            this.dbService.getAllTablesWithConnection().subscribe(list => {
+              const match = list.find(x => x.tableName === tableToFind);
+              if (match) {
+                // set found connection active
+                const connsSub = this.dbService.getConnections().subscribe(conns => {
+                  const conn = conns.find(c => c.id === match.connectionId);
+                  if (conn) {
+                    this.dbService.setActiveConnection(conn);
+                    this.selectedConnection = conn;
+                    this.loadTables();
+                    setTimeout(() => {
+                      this.selectedTable = tableToFind;
+                      this.loadColumnsForSavedQuestion(selectedColumnsToApply);
+                    }, 300);
+                  }
+                });
+                this.subscriptions.add(connsSub);
+              } else {
+                // fallback to current active connection with retries
+                if ((!this.tables || this.tables.length === 0) && attempt < 10) {
+                  setTimeout(() => this.checkForSavedQuestion(attempt + 1), 300);
+                  return;
+                }
+                if (this.selectedTable && this.selectedConnection) {
+                  this.loadColumnsForSavedQuestion(selectedColumnsToApply);
+                } else {
+                  this.toastService.showToast('Please select a database connection first', 'error');
+                }
+              }
+            });
+          } else {
+            if ((!this.tables || this.tables.length === 0) && attempt < 10) {
+              setTimeout(() => this.checkForSavedQuestion(attempt + 1), 300);
+              return;
+            }
+            if (this.selectedTable && this.selectedConnection) {
+              this.loadColumnsForSavedQuestion(selectedColumnsToApply);
+            } else {
+              this.toastService.showToast('Please select a database connection first', 'error');
+            }
+          }
         }
       } else if (question.type === 'sql') {
         console.log("question type", question.type);
@@ -223,11 +322,12 @@ private checkForSavedQuestion() {
 }
 
 private loadColumnsForSavedQuestion(selectedColumnsToApply: string[]) {
-  const columnsSub = this.dbService.getTableColumns(this.selectedTable, this.selectedConnection!.id).subscribe({
+  const sub = this.dbService.getTableColumns(this.selectedTable, this.selectedConnection!.id).subscribe({
     next: (columnNames) => {
+      const selectAll = !selectedColumnsToApply || selectedColumnsToApply.length === 0;
       this.columns = columnNames.map(name => ({
         name,
-        selected: selectedColumnsToApply.includes(name),
+        selected: selectAll ? true : selectedColumnsToApply.includes(name),
         type: this.inferColumnType(name)
       }));
       console.log("Columns loaded with selection:", this.columns);
@@ -237,7 +337,7 @@ private loadColumnsForSavedQuestion(selectedColumnsToApply: string[]) {
       // Run the query after columns are loaded
       setTimeout(() => {
         this.runQuery();
-        
+
         // Force chart to render after query completes
         setTimeout(() => {
           this.forceChartRender();
@@ -249,7 +349,7 @@ private loadColumnsForSavedQuestion(selectedColumnsToApply: string[]) {
       this.toastService.showToast('Error loading table columns', 'error');
     }
   });
-  columnsSub.unsubscribe();
+  this.subscriptions.add(sub);
 }
 
 private forceChartRender() {
@@ -653,6 +753,8 @@ saveQuestion() {
       query: questionPayload.Query,
       table: questionPayload.TableName,  // Add this - use 'table' not 'tableName'
       tableName: questionPayload.TableName,  // Keep tableName if your API expects it
+      connectionId: this.selectedConnection?.id,
+      connectionName: this.selectedConnection?.name,
       groupBy: questionPayload.GroupBy,
       metric: questionPayload.Metric,
       metricColumn: questionPayload.MetricColumn,

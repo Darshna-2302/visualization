@@ -13,3 +13,4 @@ C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.Infrastr
 C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.Infrastructure\obj\Debug\net9.0\refint\BIApp.Infrastructure.dll
 C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.Infrastructure\obj\Debug\net9.0\BIApp.Infrastructure.pdb
 C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.Infrastructure\obj\Debug\net9.0\ref\BIApp.Infrastructure.dll
+C:\Users\DELL\Documents\PMS\visualization-1\visualization\backend\BIApp.Infrastructure\obj\Debug\net9.0\BIApp.Infrastructure.sourcelink.json

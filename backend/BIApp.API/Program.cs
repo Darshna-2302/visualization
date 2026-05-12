@@ -166,6 +166,8 @@ using (var scope = app.Services.CreateScope())
             var hasSelectedColumnsJson = false;
             var hasTableName = false;
             var hasUserIdSq = false;
+            var hasConnectionId = false;
+            var hasConnectionName = false;
 
             while (reader.Read())
             {
@@ -209,6 +211,20 @@ using (var scope = app.Services.CreateScope())
                 using var alter4 = connection.CreateCommand();
                 alter4.CommandText = "ALTER TABLE SavedQuestions ADD COLUMN TableName TEXT DEFAULT '';";
                 alter4.ExecuteNonQuery();
+            }
+
+            if (!hasConnectionId)
+            {
+                using var alterConnId = connection.CreateCommand();
+                alterConnId.CommandText = "ALTER TABLE SavedQuestions ADD COLUMN ConnectionId INTEGER NULL;";
+                alterConnId.ExecuteNonQuery();
+            }
+
+            if (!hasConnectionName)
+            {
+                using var alterConnName = connection.CreateCommand();
+                alterConnName.CommandText = "ALTER TABLE SavedQuestions ADD COLUMN ConnectionName TEXT NULL;";
+                alterConnName.ExecuteNonQuery();
             }
 
             if (!hasUserIdSq)

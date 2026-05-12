@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { SavedQuestion, SavedQuestionsService } from '../../services/saved-Question.service';
 import { ToastService } from '../../services/toast.service';
-import { Subscription } from 'rxjs';
+import { connect, Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -512,8 +512,8 @@ export class SavedQuestionsComponent implements OnInit, OnDestroy {
     if (this.searchTerm && this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase().trim();
       filtered = filtered.filter(q => 
-        q.name.toLowerCase().includes(term) ||
-        q.table.toLowerCase().includes(term)
+        (q.name || '').toString().toLowerCase().includes(term) ||
+        ((q.table || q.tableName || '')).toString().toLowerCase().includes(term)
       );
     }
     
@@ -538,7 +538,9 @@ export class SavedQuestionsComponent implements OnInit, OnDestroy {
     metricColumn: question.metricColumn || '',
     chartType: question.chartType || 'table',
     filters: question.filters || [],
-    selectedColumns: question.selectedColumns || []
+    selectedColumns: question.selectedColumns || [],
+    connectionId:question.connectionId || '',
+    connectionName: question.connectionName || ''
   };
   
   // Clear any existing data first
