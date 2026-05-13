@@ -65,7 +65,8 @@
       <!-- Visual Builder -->
       <div *ngIf="activeTab === 'visual'" class="visual-builder">
         <div class="builder-grid">
-          <!-- Tables & Columns Section -->
+
+          <!-- ── Data Source Section ── -->
           <div class="builder-section">
             <h4>
               <span class="material-symbols-outlined">table_view</span>
@@ -88,9 +89,46 @@
                 </label>
               </div>
             </div>
+
+            <!-- ══ JOIN SECTION ══ -->
+            <div class="join-section">
+              <!-- Add Related Table button -->
+              <button class="btn-join" (click)="openJoinModal()" [disabled]="!canAddJoin">
+                <span class="material-symbols-outlined">add_circle</span>
+                Add Related Table
+              </button>
+
+              <!-- Active joins list -->
+              <div class="joined-tables-list" *ngIf="joinedTables.length > 0">
+                <div *ngFor="let join of joinedTables; let i = index" class="joined-table-item">
+                  <span class="join-badge">{{join.type}}</span>
+                  <span class="join-table-name">{{join.table}}</span>
+                  <span class="join-condition">ON {{join.condition}}</span>
+                  <button class="remove-join-btn" (click)="removeJoin(i)" title="Remove join">
+                    <span class="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Columns from each joined table (reuse primary columns style) -->
+              <div *ngFor="let join of joinedTables" class="joined-columns-section columns-list">
+                <div class="joined-columns-header">
+                  <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle">link</span>
+                  <span class="joined-columns-title">{{join.table}} columns</span>
+                </div>
+                <div class="checkbox-group" *ngFor="let col of join.columns; trackBy: trackByColumnName">
+                  <label>
+                    <input type="checkbox" [(ngModel)]="col.selected" />
+                    <span class="column-name">{{join.table}}.{{col.name}}</span>
+                    <span class="column-type" [class]="col.type">{{col.type}}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <!-- ══ END JOIN SECTION ══ -->
           </div>
           
-          <!-- Filters Section -->
+          <!-- ── Filters Section ── -->
           <div class="builder-section">
             <h4>
               <span class="material-symbols-outlined">filter_alt</span>
@@ -118,7 +156,7 @@
             </button>
           </div>
           
-          <!-- Aggregation & Visualization Section -->
+          <!-- ── Summarize & Visualize Section ── -->
           <div class="builder-section">
             <h4>
               <span class="material-symbols-outlined">bar_chart</span>
@@ -151,8 +189,6 @@
               </div>
             </div>
 
-            
-            
             <div class="chart-type-selector">
               <label>Visualization Type</label>
               <div class="chart-buttons">
@@ -168,9 +204,10 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+
+        </div><!-- /.builder-grid -->
+      </div><!-- /.visual-builder -->
+    </div><!-- /.query-editor -->
     
     <!-- Query Results -->
     <div class="query-results" *ngIf="results">
@@ -179,50 +216,44 @@
           <h4>Results</h4>
           <span class="results-stats">{{results.rowCount}} rows · {{results.executionTime.toFixed(0)}}ms</span>
         </div>
-        <div class="results-actions" >
-
-         
-        </div>
+        <div class="results-actions"></div>
       </div>
-      
-      
 
-<!-- Table view -->
-<div class="table-responsive" *ngIf="!showChart && resultsRows.length">
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th *ngFor="let col of resultsColumns">{{ formatColumnName(col) }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let row of resultsRows; trackBy: trackByIndex">
-        <td *ngFor="let col of resultsColumns">
-          <span [class]="getStatusClass(row[col])">{{ row[col] }}</span>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+      <!-- Table view -->
+      <div class="table-responsive" *ngIf="!showChart && resultsRows.length">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th *ngFor="let col of resultsColumns">{{ formatColumnName(col) }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of resultsRows; trackBy: trackByIndex">
+              <td *ngFor="let col of resultsColumns">
+                <span [class]="getStatusClass(row[col])">{{ row[col] }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       
       <!-- Chart Visualization -->
       <div *ngIf="showChart" class="chart-container">
-  <!-- Replace your chart component usage with: -->
-<app-vega-chart *ngIf="showChart"
-  [data]="chartData"
-  [chartType]="chartType"
-  [xAxis]="xAxisField"
-  [yAxis]="yAxisField"
-  [groupBy]="groupBy"
-  [title]="chartTitle"
-  [metric]="metric"
-  [metricColumn]="metricColumn">
-</app-vega-chart>
-</div>
+        <app-vega-chart *ngIf="showChart"
+          [data]="chartData"
+          [chartType]="chartType"
+          [xAxis]="xAxisField"
+          [yAxis]="yAxisField"
+          [groupBy]="groupBy"
+          [title]="chartTitle"
+          [metric]="metric"
+          [metricColumn]="metricColumn">
+        </app-vega-chart>
+      </div>
 
-<div *ngIf="chartType !== 'table' && (!results || !results.rows || results.rows.length === 0)" class="no-data-message">
-  No data available for visualization
-</div>
+      <div *ngIf="chartType !== 'table' && (!results || !results.rows || results.rows.length === 0)" class="no-data-message">
+        No data available for visualization
+      </div>
     </div>
     
     <!-- Loading State -->
@@ -230,7 +261,101 @@
       <div class="spinner"></div>
       <p>Running query...</p>
     </div>
-  </div>
+  </div><!-- /.query-card -->
 
 
-</div>
+  <!-- ══════════════════════════════════════════════
+       JOIN MODAL
+  ══════════════════════════════════════════════ -->
+  <div class="modal-overlay" *ngIf="showJoinModal" (click)="closeJoinModal($event)">
+    <div class="modal-container">
+
+      <div class="modal-header">
+        <h3>
+          <span class="material-symbols-outlined" style="vertical-align:middle;margin-right:8px;color:#8b5cf6">join_inner</span>
+          Add Related Table
+        </h3>
+        <button class="modal-close" (click)="showJoinModal = false">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- Table selector -->
+        <div class="form-group">
+          <label>Table to Join</label>
+          <select [(ngModel)]="pendingJoin.table" (ngModelChange)="onJoinTableChange()" class="form-select">
+            <option value="">Select a table…</option>
+            <option *ngFor="let t of availableJoinTables" [value]="t">{{t}}</option>
+          </select>
+        </div>
+
+        <!-- Join type -->
+        <div class="form-group">
+          <label>Join Type</label>
+          <div class="join-type-buttons">
+            <button *ngFor="let jt of joinTypes"
+              [class.active]="pendingJoin.type === jt.value"
+              (click)="pendingJoin.type = jt.value"
+              class="join-type-btn"
+              [title]="jt.desc">
+              <span class="material-symbols-outlined">{{jt.icon}}</span>
+              {{jt.label}}
+            </button>
+          </div>
+        </div>
+
+        <!-- Condition selectors -->
+        <div class="form-group" *ngIf="pendingJoin.table">
+          <label>Join Condition</label>
+          <div class="join-condition-input">
+            <select [(ngModel)]="pendingJoin.leftCol" class="form-select-sm" style="flex:1">
+              <option value="">{{selectedTable}} column</option>
+              <option *ngFor="let col of columns" [value]="col.name">{{selectedTable}}.{{col.name}}</option>
+            </select>
+            <span class="join-equals">=</span>
+            <select [(ngModel)]="pendingJoin.rightCol" class="form-select-sm" style="flex:1">
+              <option value="">{{pendingJoin.table}} column</option>
+              <option *ngFor="let col of pendingJoinColumns" [value]="col.name">{{pendingJoin.table}}.{{col.name}}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Smart suggestions -->
+        <!-- <div class="join-suggestions" *ngIf="joinSuggestions.length > 0">
+          <label>
+            <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle">auto_awesome</span>
+            Suggested conditions
+          </label>
+          <div class="suggestion-buttons">
+            <button *ngFor="let s of joinSuggestions"
+              class="suggestion-btn"
+              (click)="applySuggestion(s)">
+              {{s}}
+            </button>
+          </div>
+        </div> -->
+
+        <!-- SQL Preview -->
+        <div class="modal-preview" *ngIf="joinSqlPreview">
+          <strong>Preview</strong>
+          <code>{{ joinSqlPreview }}</code>
+        </div>
+
+      </div><!-- /.modal-body -->
+
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="showJoinModal = false">Cancel</button>
+        <button class="btn-primary"
+          [disabled]="!pendingJoin.table || !pendingJoin.leftCol || !pendingJoin.rightCol"
+          (click)="confirmJoin()">
+          <span class="material-symbols-outlined">done</span>
+          Add Join
+        </button>
+      </div>
+
+    </div><!-- /.modal-container -->
+  </div><!-- /.modal-overlay -->
+
+</div><!-- /.query-container -->
