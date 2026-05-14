@@ -7,6 +7,7 @@ import { SavedQuestionsComponent } from './components/saved-questions/saved-ques
 import { LoginComponent } from './components/login/login';
 import { RegisterComponent } from './components/register/register';
 import { AuthGuard } from './services/auth.guard';
+import {  VisualMapperComponent } from './components/visual-component/visual-component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/connections', pathMatch: 'full' },
@@ -17,4 +18,5 @@ export const routes: Routes = [
   { path: 'query', redirectTo: 'query-builder' },
   { path: 'browse-data', component: BrowseDataComponent, canActivate: [AuthGuard] },
   { path: 'saved-questions', component: SavedQuestionsComponent, canActivate: [AuthGuard] },
+  { path: 'visualizer', component: VisualMapperComponent, canActivate: [AuthGuard] },
 ];

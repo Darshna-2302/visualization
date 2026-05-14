@@ -64,8 +64,12 @@ export class DatabaseService {
     }
   };
 
+
+
   constructor(private apiService: ApiService, private authService: AuthService) {
     this.init();
+
+
 
     // Listen for auth changes: when user logs in, fetch backend connections; when logs out, clear user-owned cache
     this.authService.isAuthenticated$.subscribe(isAuth => {
@@ -304,22 +308,94 @@ export class DatabaseService {
   }
 
   getTableData(tableName: string, connectionId?: number): Observable<any[]> {
-    const conns = connectionId != null
-      ? this.connections.filter(c => c.id === connectionId)
-      : this.connections;
-    for (const conn of conns) {
-      const schema = this.schemas[conn.id];
-      if (schema?.[tableName]) return of([...schema[tableName]]).pipe(delay(100));
-    }
-    // If connectionId provided, try backend query: SELECT * FROM tableName LIMIT 100
+    // Prefer backend data for a specific connection; fallback to local schema only on error
     if (connectionId != null) {
       const q = `SELECT * FROM ${tableName} LIMIT 100`;
       return this.apiService.runQuery(connectionId, q).pipe(
         map((res: any) => res?.rows || []),
-        catchError(() => of([]))
+        catchError(() => {
+          // fallback to local cache if API fails
+          const schema = this.schemas[connectionId];
+          if (schema && schema[tableName]) return of([...schema[tableName]]);
+          return of([]);
+        })
       );
     }
+
+    // No connectionId specified: return local schema if available
+    for (const conn of this.connections) {
+      const schema = this.schemas[conn.id];
+      if (schema?.[tableName]) return of([...schema[tableName]]).pipe(delay(100));
+    }
     return of([]).pipe(delay(100));
+  }
+
+  getDistinctValues(tableName: string, columnName: string, connectionId?: number): Observable<any[]> {
+    const connId = connectionId ?? this.activeConnectionSubject.value?.id ?? null;
+    if (connId != null) {
+      // Prefer backend API
+      return this.apiService.getDistinctValues(connId, tableName, columnName).pipe(
+        // normalize values: API may return objects like { ColumnName: value }
+        map((vals: any[]) => {
+          if (!Array.isArray(vals)) return [];
+          return vals.map(v => {
+            if (v == null) return v;
+            if (typeof v === 'object') {
+              const arr = Object.values(v);
+              return arr.length === 1 ? arr[0] : v;
+            }
+            return v;
+          });
+        }),
+        catchError(() => {
+          // fallback to local cache only if API fails
+          const schema = this.schemas[connId];
+          if (schema && schema[tableName]) {
+            const vals = [...new Set(schema[tableName].map((r: any) => r[columnName]).filter((v: any) => v != null))];
+            return of(vals);
+          }
+          return of([]);
+        })
+      );
+    }
+    return of([]);
+  }
+
+  getRowsByColumnValue(tableName: string, columnName: string, value: string, connectionId?: number): Observable<any[]> {
+    const connId = connectionId ?? this.activeConnectionSubject.value?.id ?? null;
+    if (connId != null) {
+      // Prefer backend API
+      return this.apiService.getRowsByColumnValue(connId, tableName, columnName, value).pipe(
+        catchError(() => {
+          // fallback to local cache only if API fails
+          const schema = this.schemas[connId];
+          if (schema && schema[tableName]) {
+            const rows = schema[tableName].filter((r: any) => String(r[columnName]) === String(value));
+            return of(rows);
+          }
+          return of([]);
+        })
+      );
+    }
+    return of([]);
+  }
+
+  getSensorsByNode(sensorJoinColumn: string, nodeJoinColumn: string, nodeValue: string, connectionId?: number): Observable<any[]> {
+    const connId = connectionId ?? this.activeConnectionSubject.value?.id ?? null;
+    if (connId != null) {
+      return this.apiService.getSensorsByNode(connId, sensorJoinColumn, nodeJoinColumn, nodeValue).pipe(
+        catchError(() => {
+          // fallback: attempt to load sensor table and client-filter by matching any column to nodeValue
+          const schema = this.schemas[connId];
+          if (schema && schema['sensor']) {
+            const rows = schema['sensor'].filter((r: any) => Object.values(r).some((v: any) => String(v) === String(nodeValue)));
+            return of(rows);
+          }
+          return of([]);
+        })
+      );
+    }
+    return of([]);
   }
 
   getTableColumns(tableName: string, connectionId?: number): Observable<string[]> {

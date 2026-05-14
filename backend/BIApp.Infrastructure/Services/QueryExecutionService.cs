@@ -171,4 +171,135 @@ public class QueryExecutionService : IQueryExecutionService
             return cols;
         }
     }
+
+    public async Task<IEnumerable<object>> GetDistinctValuesAsync(int connectionId, string tableName, string columnName)
+    {
+        var cols = (await GetColumnsAsync(connectionId, tableName)).ToList();
+        if (!cols.Contains(columnName)) throw new KeyNotFoundException("Column not found.");
+
+        var connectionConfig = await _context.DbConnections.FindAsync(connectionId);
+        if (connectionConfig == null) throw new KeyNotFoundException("Database connection not found.");
+        var provider = (connectionConfig.Provider ?? "SqlServer").ToLowerInvariant();
+
+        if (provider.Contains("mysql"))
+        {
+            var cs = $"Server={connectionConfig.Server};Database={connectionConfig.Database};Uid={connectionConfig.Username};Pwd={connectionConfig.Password};SslMode=Preferred;";
+            using var connection = new MySqlConnection(cs);
+            await connection.OpenAsync();
+            var q = $"SELECT DISTINCT `{columnName}` FROM `{tableName}` WHERE `{columnName}` IS NOT NULL ORDER BY `{columnName}`";
+            var vals = await connection.QueryAsync<object>(q);
+            return vals;
+        }
+        else
+        {
+            var cs = $"Server={connectionConfig.Server};Database={connectionConfig.Database};User Id={connectionConfig.Username};Password={connectionConfig.Password};TrustServerCertificate=True;";
+            using var connection = new SqlConnection(cs);
+            await ((SqlConnection)connection).OpenAsync();
+            var q = $"SELECT DISTINCT [{columnName}] FROM [{tableName}] WHERE [{columnName}] IS NOT NULL ORDER BY [{columnName}]";
+            var vals = await connection.QueryAsync<object>(q);
+            return vals;
+        }
+    }
+
+    public async Task<IEnumerable<Dictionary<string, object?>>> GetRowsByColumnValueAsync(int connectionId, string tableName, string columnName, object value)
+    {
+        var cols = (await GetColumnsAsync(connectionId, tableName)).ToList();
+        if (!cols.Contains(columnName)) throw new KeyNotFoundException("Column not found.");
+
+        var connectionConfig = await _context.DbConnections.FindAsync(connectionId);
+        if (connectionConfig == null) throw new KeyNotFoundException("Database connection not found.");
+        var provider = (connectionConfig.Provider ?? "SqlServer").ToLowerInvariant();
+
+        IEnumerable<dynamic> rows;
+
+        if (provider.Contains("mysql"))
+        {
+            var cs = $"Server={connectionConfig.Server};Database={connectionConfig.Database};Uid={connectionConfig.Username};Pwd={connectionConfig.Password};SslMode=Preferred;";
+            using var connection = new MySqlConnection(cs);
+            await connection.OpenAsync();
+            var q = $"SELECT * FROM `{tableName}` WHERE `{columnName}` = @val";
+            rows = await connection.QueryAsync(q, new { val = value });
+        }
+        else
+        {
+            var cs = $"Server={connectionConfig.Server};Database={connectionConfig.Database};User Id={connectionConfig.Username};Password={connectionConfig.Password};TrustServerCertificate=True;";
+            using var connection = new SqlConnection(cs);
+            await ((SqlConnection)connection).OpenAsync();
+            var q = $"SELECT * FROM [{tableName}] WHERE [{columnName}] = @val";
+            rows = await connection.QueryAsync(q, new { val = value });
+        }
+
+        var listRows = new List<Dictionary<string, object?>>();
+        foreach (var r in rows)
+        {
+            if (r is IDictionary<string, object> dict)
+            {
+                var rowDict = dict.ToDictionary(kv => kv.Key, kv => (object?)kv.Value);
+                listRows.Add(rowDict);
+            }
+            else
+            {
+                var rowDict = new Dictionary<string, object?>();
+                foreach (var prop in r.GetType().GetProperties())
+                {
+                    rowDict[prop.Name] = prop.GetValue(r);
+                }
+                listRows.Add(rowDict);
+            }
+        }
+        return listRows;
+    }
+
+    public async Task<IEnumerable<Dictionary<string, object?>>> GetSensorsByNodeAsync(int connectionId, string sensorJoinColumn, string nodeJoinColumn, object nodeValue)
+    {
+        // validate columns exist on both tables
+        var sensorCols = (await GetColumnsAsync(connectionId, "sensor")).ToList();
+        var nodeCols = (await GetColumnsAsync(connectionId, "node")).ToList();
+        if (!sensorCols.Contains(sensorJoinColumn)) throw new KeyNotFoundException("Sensor join column not found.");
+        if (!nodeCols.Contains(nodeJoinColumn)) throw new KeyNotFoundException("Node join column not found.");
+
+        var connectionConfig = await _context.DbConnections.FindAsync(connectionId);
+        if (connectionConfig == null) throw new KeyNotFoundException("Database connection not found.");
+        var provider = (connectionConfig.Provider ?? "SqlServer").ToLowerInvariant();
+
+        IEnumerable<dynamic> rows;
+
+        if (provider.Contains("mysql"))
+        {
+            var cs = $"Server={connectionConfig.Server};Database={connectionConfig.Database};Uid={connectionConfig.Username};Pwd={connectionConfig.Password};SslMode=Preferred;";
+            using var connection = new MySqlConnection(cs);
+            await connection.OpenAsync();
+            var q = $"SELECT s.* FROM `{"sensor"}` s INNER JOIN `{"node"}` n ON s.`{sensorJoinColumn}` = n.`{nodeJoinColumn}` WHERE n.`{nodeJoinColumn}` = @val";
+            rows = await connection.QueryAsync(q, new { val = nodeValue });
+        }
+        else
+        {
+            var cs = $"Server={connectionConfig.Server};Database={connectionConfig.Database};User Id={connectionConfig.Username};Password={connectionConfig.Password};TrustServerCertificate=True;";
+            using var connection = new SqlConnection(cs);
+            await ((SqlConnection)connection).OpenAsync();
+            var q = $"SELECT s.* FROM [{"sensor"}] s INNER JOIN [{"node"}] n ON s.[{sensorJoinColumn}] = n.[{nodeJoinColumn}] WHERE n.[{nodeJoinColumn}] = @val";
+            rows = await connection.QueryAsync(q, new { val = nodeValue });
+        }
+
+        var listRows = new List<Dictionary<string, object?>>();
+        foreach (var r in rows)
+        {
+            if (r is IDictionary<string, object> dict)
+            {
+                var rowDict = dict.ToDictionary(kv => kv.Key, kv => (object?)kv.Value);
+                listRows.Add(rowDict);
+            }
+            else
+            {
+                var rowDict = new Dictionary<string, object?>();
+                foreach (var prop in r.GetType().GetProperties())
+                {
+                    rowDict[prop.Name] = prop.GetValue(r);
+                }
+                listRows.Add(rowDict);
+            }
+        }
+
+        return listRows;
+    }
 }

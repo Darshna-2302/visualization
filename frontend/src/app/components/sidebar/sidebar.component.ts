@@ -37,6 +37,11 @@ import { RouterModule, Router } from '@angular/router';
           <span class="material-symbols-outlined active-icon">database</span>
           <span>Connections</span>
         </a>
+
+        <a [routerLink]="['/visualizer']" routerLinkActive="active" class="nav-item">
+          <span class="material-symbols-outlined">dashboard</span>
+          <span>Visualizer</span>
+        </a>
       </nav>
       
       <div class="bottom-section">

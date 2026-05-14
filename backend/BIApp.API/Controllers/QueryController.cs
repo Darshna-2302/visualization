@@ -114,6 +114,98 @@ public class QueryController : ControllerBase
         }
     }
 
+    [HttpGet("distinct/{connectionId}/{tableName}/{columnName}")]
+    public async Task<IActionResult> GetDistinctValues(int connectionId, string tableName, string columnName)
+    {
+        try
+        {
+            var conn = await _connService.GetByIdAsync(connectionId);
+            if (conn == null && connectionId == 1)
+            {
+                var mock = BuiltinSchema();
+                if (mock.ContainsKey(tableName))
+                {
+                    var vals = mock[tableName].Where(r => r.ContainsKey(columnName)).Select(r => r[columnName]).Where(v => v != null).Distinct().ToList();
+                    return Ok(vals);
+                }
+                return NotFound();
+            }
+
+            var valsResult = await _queryService.GetDistinctValuesAsync(connectionId, tableName, columnName);
+            return Ok(valsResult);
+        }
+        catch (KeyNotFoundException knf)
+        {
+            return NotFound(new { Error = knf.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Error = "Failed to load distinct values.", Details = ex.Message });
+        }
+    }
+
+    [HttpGet("filter/{connectionId}/{tableName}/{columnName}")]
+    public async Task<IActionResult> GetRowsByColumnValue(int connectionId, string tableName, string columnName, [FromQuery] string value)
+    {
+        try
+        {
+            var conn = await _connService.GetByIdAsync(connectionId);
+            if (conn == null && connectionId == 1)
+            {
+                var mock = BuiltinSchema();
+                if (mock.ContainsKey(tableName))
+                {
+                    var rows = mock[tableName].Where(r => r.ContainsKey(columnName) && String.Equals(Convert.ToString(r[columnName]), value, StringComparison.Ordinal)).ToList();
+                    return Ok(rows);
+                }
+                return NotFound();
+            }
+
+            var rowsResult = await _queryService.GetRowsByColumnValueAsync(connectionId, tableName, columnName, value);
+            return Ok(rowsResult);
+        }
+        catch (KeyNotFoundException knf)
+        {
+            return NotFound(new { Error = knf.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Error = "Failed to load filtered rows.", Details = ex.Message });
+        }
+    }
+
+    [HttpGet("sensors-by-node/{connectionId}/{sensorJoinColumn}/{nodeJoinColumn}")]
+    public async Task<IActionResult> GetSensorsByNode(int connectionId, string sensorJoinColumn, string nodeJoinColumn, [FromQuery] string value)
+    {
+        try
+        {
+            var conn = await _connService.GetByIdAsync(connectionId);
+            if (conn == null && connectionId == 1)
+            {
+                var mock = BuiltinSchema();
+                if (mock.ContainsKey("sensor") && mock.ContainsKey("node"))
+                {
+                    var sensors = mock["sensor"];
+                    var nodes = mock["node"];
+                    var matched = sensors.Where(s => nodes.Any(n => n.ContainsKey(nodeJoinColumn) && s.ContainsKey(sensorJoinColumn) && String.Equals(Convert.ToString(n[nodeJoinColumn]), value, StringComparison.Ordinal) && String.Equals(Convert.ToString(s[sensorJoinColumn]), Convert.ToString(n[nodeJoinColumn]), StringComparison.Ordinal))).ToList();
+                    return Ok(matched);
+                }
+                return NotFound();
+            }
+
+            var rows = await _queryService.GetSensorsByNodeAsync(connectionId, sensorJoinColumn, nodeJoinColumn, value);
+            return Ok(rows);
+        }
+        catch (KeyNotFoundException knf)
+        {
+            return NotFound(new { Error = knf.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Error = "Failed to load sensors by node.", Details = ex.Message });
+        }
+    }
+
     private static Dictionary<string, List<Dictionary<string, object?>>> BuiltinSchema()
     {
         return new Dictionary<string, List<Dictionary<string, object?>>> {

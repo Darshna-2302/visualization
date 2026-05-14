@@ -1,0 +1,158 @@
+<div class="visual-container">
+  <div class="page-header">
+    <h1 class="page-title">Visual Builder</h1>
+    <p class="page-description">Map table columns and render chart (visual mode)</p>
+  </div>
+
+  <div *ngIf="connections && connections.length" class="connection-status">
+    <div class="status-indicator connected"></div>
+    <span class="connection-name">{{connections[0].name}}</span>
+    <span class="connection-detail">Active connection</span>
+  </div>
+  <div *ngIf="!connections || !connections.length" class="no-connection-warning">
+    <span class="material-symbols-outlined">warning</span>
+    <div>
+      <strong>No active database connection</strong>
+      <p>Please go to Connections and select a database to start mapping</p>
+    </div>
+    <button routerLink="/connections" class="btn-connect">Go to Connections</button>
+  </div>
+
+  <div *ngIf="connections && connections.length" class="builder-card">
+    <div class="builder-grid">
+
+      <!-- Data Source -->
+      <div class="builder-section">
+        <h4>
+          <span class="material-symbols-outlined">table_view</span>
+          Data Source
+        </h4>
+
+        <div class="form-group">
+          <label>Main Table</label>
+          <select [(ngModel)]="selectedMainTable" (change)="onMainTableChange()" class="form-select">
+            <option [ngValue]="''">-- select main table --</option>
+            <option *ngFor="let t of tables" [value]="t">{{t}}</option>
+          </select>
+        </div>
+
+        <!-- Node → Sensor → Channel cascade (only when main table = node) -->
+        <ng-container *ngIf="selectedMainTable === 'node'">
+
+          <div class="form-group">
+            <label>Node</label>
+            <select [(ngModel)]="selectedNodeValue"
+                    (change)="onSelectedNodeInstanceChange()"
+                    class="form-select">
+              <option [ngValue]="''">-- select node --</option>
+              <option *ngFor="let v of nodeValues" [value]="v">{{v}}</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Sensor</label>
+            <select [(ngModel)]="selectedSensorNode"
+                    (change)="onSelectedSensorNodeChange()"
+                    class="form-select"
+                    [disabled]="!relatedSensorsForNode || relatedSensorsForNode.length === 0">
+              <option [ngValue]="''">-- select sensor --</option>
+              <option *ngFor="let s of relatedSensorsForNode" [value]="s.id">{{s.name}}</option>
+            </select>
+            <div *ngIf="selectedNodeValue && (!relatedSensorsForNode || relatedSensorsForNode.length === 0)"
+                 style="margin-top:6px; color:#64748b; font-size:13px;">
+              No sensors found for selected node.
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Channel</label>
+            <select [(ngModel)]="selectedChannel"
+                    (change)="onSelectedChannelChange()"
+                    class="form-select"
+                    [disabled]="!filteredChannels || filteredChannels.length === 0">
+              <option [ngValue]="''">-- select channel --</option>
+              <option *ngFor="let ch of filteredChannels" [value]="ch.id">{{ch.name}}</option>
+            </select>
+            <div *ngIf="selectedSensorNode && (!filteredChannels || filteredChannels.length === 0)"
+                 style="margin-top:6px; color:#64748b; font-size:13px;">
+              No channels found for selected sensor.
+            </div>
+          </div>
+
+        </ng-container>
+
+        <!-- Available columns for other tables -->
+        <div class="columns-list"
+             *ngIf="selectedMainTable && selectedMainTable !== 'node' && columns && columns.length">
+          <label>Available Columns</label>
+          <div *ngFor="let col of columns" class="column-item">
+            <span class="column-name">{{col}}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <!-- <div class="builder-section">
+        <h4>
+          <span class="material-symbols-outlined">filter_alt</span>
+          Filters
+        </h4>
+        <p class="muted">Use filters to narrow down rows when loading visualization.</p>
+        <div class="form-group">
+          <label>Date Column</label>
+          <select [(ngModel)]="dateColumn" class="form-select">
+            <option [ngValue]="''">-- select date column --</option>
+            <option *ngFor="let col of columns" [value]="col">{{col}}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Value Column</label>
+          <select [(ngModel)]="valueColumn" class="form-select">
+            <option [ngValue]="''">-- select value column --</option>
+            <option *ngFor="let col of columns" [value]="col">{{col}}</option>
+          </select>
+        </div>
+      </div> -->
+
+      <!-- Visualize -->
+      <div class="builder-section">
+        <h4>
+          <span class="material-symbols-outlined">bar_chart</span>
+          Visualize
+        </h4>
+        <div class="form-group">
+          <label>Chart Type</label>
+          <div class="chart-buttons">
+            <button *ngFor="let ct of chartTypes"
+                    (click)="chartType = ct.value"
+                    [class.active]="chartType === ct.value"
+                    class="chart-btn">{{ct.label}}</button>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <button (click)="loadAndVisualize()"
+                  [disabled]="!isVisualizationReady()"
+                  class="btn-primary">Load & Visualize</button>
+          <button (click)="resetSelections()"
+                  class="btn-secondary"
+                  style="margin-left:8px;">Reset</button>
+        </div>
+      </div>
+
+    </div><!-- /.builder-grid -->
+
+    <!-- Chart + preview -->
+    <div class="query-results" style="margin-top:16px;">
+      <div class="chart-area">
+        <app-vega-chart
+          [data]="chartData"
+          [chartType]="chartType"
+          [xAxis]="xAxisField"
+          [yAxis]="yAxisField"
+          [title]="chartTitle">
+        </app-vega-chart>
+      </div>
+     
+    </div>
+  </div><!-- /.builder-card -->
+</div>

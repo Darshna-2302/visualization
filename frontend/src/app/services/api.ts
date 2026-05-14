@@ -57,4 +57,17 @@ export class ApiService {
   getColumns(connectionId: number, tableName: string): Observable<string[]> {
     return this.http.get<string[]>(`${this.baseUrl}/Query/columns/${connectionId}/${encodeURIComponent(tableName)}`, { headers: this.getHeaders() });
   }
+
+  getDistinctValues(connectionId: number, tableName: string, columnName: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/Query/distinct/${connectionId}/${encodeURIComponent(tableName)}/${encodeURIComponent(columnName)}`, { headers: this.getHeaders() });
+  }
+
+  getRowsByColumnValue(connectionId: number, tableName: string, columnName: string, value: string): Observable<any[]> {
+    // value passed as query string to avoid path encoding issues
+    return this.http.get<any[]>(`${this.baseUrl}/Query/filter/${connectionId}/${encodeURIComponent(tableName)}/${encodeURIComponent(columnName)}?value=${encodeURIComponent(value)}`, { headers: this.getHeaders() });
+  }
+
+  getSensorsByNode(connectionId: number, sensorJoinColumn: string, nodeJoinColumn: string, value: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/Query/sensors-by-node/${connectionId}/${encodeURIComponent(sensorJoinColumn)}/${encodeURIComponent(nodeJoinColumn)}?value=${encodeURIComponent(value)}`, { headers: this.getHeaders() });
+  }
 }
