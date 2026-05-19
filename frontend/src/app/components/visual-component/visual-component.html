@@ -57,8 +57,6 @@
               </option>
               <option *ngFor="let v of nodeValues" [value]="v">{{v}}</option>
             </select>
-            <!-- Only show after load completes with no results -->
-            
           </div>
 
           <!-- Sensor dropdown -->
@@ -73,48 +71,146 @@
               </option>
               <option *ngFor="let s of relatedSensorsForNode" [value]="s.id">{{s.name}}</option>
             </select>
-            <!--
-              Key fix: show "No sensors" ONLY when:
-              1. Not currently loading  (loadingSensors === false)
-              2. A node HAS been chosen (selectedNodeValue truthy)
-              3. The result came back empty (relatedSensorsForNode.length === 0)
-              Without condition 1 this message flashed immediately on every node pick.
-            -->
             <div *ngIf="!loadingSensors && selectedNodeValue && relatedSensorsForNode.length === 0"
-                 style="margin-top:6px; color:#64748b; font-size:13px;">
+                 class="hint-text">
               No sensors found for this node.
             </div>
           </div>
 
-          <!-- Channel dropdown -->
-          <div class="form-group">
-            <label>Channel</label>
-            <select [(ngModel)]="selectedChannel"
-                    (change)="onSelectedChannelChange()"
-                    class="form-select"
-                    [disabled]="loadingChannels || filteredChannels.length === 0">
-              <option [ngValue]="''">
-                {{ loadingChannels ? 'Loading channels...' : '-- select channel --' }}
-              </option>
-              <option *ngFor="let ch of filteredChannels" [value]="ch.id">{{ch.name}}</option>
-            </select>
-            <!--
-              Same guard as sensors: only show after load finishes with empty results.
-            -->
-            <div *ngIf="!loadingChannels && selectedSensorNode && filteredChannels.length === 0"
-                 style="margin-top:6px; color:#64748b; font-size:13px;">
+          <!-- ── Channel multi-select with checkboxes ─────────────────── -->
+          <div class="form-group" *ngIf="selectedSensorNode">
+            <label>
+              Channels
+              <span *ngIf="checkedChannelCount > 0" class="badge-count">
+                {{checkedChannelCount}} selected
+              </span>
+            </label>
+
+            <!-- Loading state -->
+            <div *ngIf="loadingChannels" class="hint-text">
+              <span class="material-symbols-outlined spin" style="font-size:14px;vertical-align:middle;">
+                progress_activity
+              </span>
+              Loading channels...
+            </div>
+
+            <div *ngIf="!loadingChannels && channelStates.length > 0"
+                 class="channel-dropdown"
+                 [class.open]="channelDropdownOpen">
+
+              <!-- Trigger button -->
+              <button type="button"
+                      class="channel-dropdown-trigger form-select"
+                      (click)="toggleChannelDropdown()">
+                <span class="trigger-text">{{ channelDropdownLabel }}</span>
+                <span class="material-symbols-outlined trigger-chevron">
+                  {{ channelDropdownOpen ? 'expand_less' : 'expand_more' }}
+                </span>
+              </button>
+
+              <div class="channel-dropdown-panel" *ngIf="channelDropdownOpen"
+                   (click)="$event.stopPropagation()">
+                <div class="channel-dropdown-scroll">
+                  <!--
+                    FIX: Color is now driven by ch.colorIndex (stable, assigned at load time),
+                    NOT by the loop variable i. Using i here was wrong because i=0,1,2...
+                    refers to position in channelStates (all channels), while the Y-axis picker
+                    below iterates checkedChannels — a subset — so the same channel got
+                    different colors in the two places.
+                  -->
+                  <label *ngFor="let ch of channelStates"
+                         class="channel-checkbox-row"
+                         [class.checked]="ch.checked">
+                    <input type="checkbox"
+                           [checked]="ch.checked"
+                           (change)="onChannelToggle(ch, $event)"
+                           class="channel-cb" />
+                    <span class="cb-label">{{ch.name}}</span>
+                    <span *ngIf="ch.loading"
+                          class="material-symbols-outlined spin cb-spinner">
+                      progress_activity
+                    </span>
+                    <span *ngIf="ch.checked && !ch.loading && ch.columns.length > 0"
+                          class="cb-col-badge"
+                          [style.background]="getChannelColor(ch.colorIndex)"
+                          [style.color]="'white'">
+                      {{ch.selectedColumn}}
+                    </span>
+                    <span *ngIf="ch.error" class="cb-error" [title]="ch.error">
+                      <span class="material-symbols-outlined" style="font-size:14px;">error</span>
+                    </span>
+                  </label>
+                </div>
+
+                <!-- Quick actions -->
+                <div class="channel-dropdown-footer">
+                  <button type="button" class="link-btn"
+                          (click)="selectAllChannels()">
+                    Select all
+                  </button>
+                  <button type="button" class="link-btn danger"
+                          (click)="clearAllChannels()">
+                    Clear all
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="!loadingChannels && channelStates.length === 0 && selectedSensorNode"
+                 class="hint-text">
               No channels found for this sensor.
             </div>
           </div>
 
+          <!-- ── Per-channel Y-axis column picker ─────────────────────── -->
+          <!--
+            FIX: Use ch.colorIndex instead of loop index i.
+            Previously: getChannelColor(i) where i is 0,1,2 within checkedChannels.
+            Now: getChannelColor(ch.colorIndex) — same stable value used everywhere.
+          -->
+          <ng-container *ngFor="let ch of checkedChannels">
+            <div *ngIf="!ch.loading && ch.columns.length > 0"
+                 class="form-group channel-col-group"
+                 [style.borderLeftColor]="getChannelColor(ch.colorIndex)">
+              <label class="value-col-label">
+                <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;">
+                  show_chart
+                </span>
+                <strong [style.color]="getChannelColor(ch.colorIndex)">{{ch.name}}</strong> — Y-Axis Column
+              </label>
+              <div class="columns-list">
+                <button *ngFor="let col of ch.columns"
+                        (click)="ch.selectedColumn = col; onChannelColumnChange(ch)"
+                        [class.active]="ch.selectedColumn === col"
+                        class="column-btn">
+                  <span class="material-symbols-outlined col-icon">show_chart</span>
+                  {{col}}
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="ch.checked && ch.loading" class="hint-text" style="margin-top:4px;">
+              <span class="material-symbols-outlined spin" style="font-size:14px;vertical-align:middle;">
+                progress_activity
+              </span>
+              Loading data for <em>{{ch.name}}</em>…
+            </div>
+
+            <div *ngIf="ch.error" class="error-message" style="margin-top:4px; font-size:12px;">
+              <span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">error</span>
+              {{ch.error}}
+            </div>
+          </ng-container>
+
         </ng-container>
 
         <!-- Available columns list for non-node tables -->
-        <div class="columns-list"
-             *ngIf="selectedMainTable && selectedMainTable !== 'node' && columns.length">
-          <label>Available Columns</label>
-          <div *ngFor="let col of columns" class="column-item">
-            <span class="column-name">{{col}}</span>
+        <div *ngIf="selectedMainTable && selectedMainTable !== 'node' && columns.length">
+          <label class="form-group">Available Columns</label>
+          <div class="columns-list">
+            <div *ngFor="let col of columns" class="column-item">
+              <span class="column-name">{{col}}</span>
+            </div>
           </div>
         </div>
 
@@ -139,7 +235,41 @@
           </div>
         </div>
 
-        <div style="margin-top:10px;">
+        <!-- Summary of current selection -->
+        <!--
+          FIX: Use ch.colorIndex here too for color consistency.
+        -->
+        <div *ngIf="checkedChannelCount > 0" class="selection-summary">
+          <div class="summary-row">
+            <span class="summary-label">Node</span>
+            <span class="summary-value">{{selectedNodeValue || '—'}}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Sensor</span>
+            <span class="summary-value">{{ getSensorName(selectedSensorNode) }}</span>
+          </div>
+
+          <ng-container *ngFor="let ch of checkedChannels; let i = index">
+            <div class="summary-row channel-summary-row">
+              <span class="summary-label">
+                <span class="series-dot" [style.backgroundColor]="getChannelColor(ch.colorIndex)"></span>
+                Ch {{i + 1}}
+              </span>
+              <span class="summary-value">{{ch.name}}</span>
+              <span class="summary-value highlight"
+                    [style.backgroundColor]="getChannelColorLight(ch.colorIndex)"
+                    [style.color]="getChannelColor(ch.colorIndex)"
+                    style="margin-left:auto;">{{ch.selectedColumn}}</span>
+            </div>
+          </ng-container>
+
+          <div *ngIf="yAxisFields.length > 1" class="summary-row">
+            <span class="summary-label">Y-Axes</span>
+            <span class="summary-value highlight">{{yAxisFields.join(', ')}}</span>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;">
           <button (click)="loadAndVisualize()"
                   [disabled]="!isVisualizationReady()"
                   class="btn-primary">
@@ -152,23 +282,33 @@
           </button>
         </div>
 
-        <!-- Inline error -->
-        <div *ngIf="errorMessage"
-             style="margin-top:10px; color:#ef4444; font-size:13px;">
+        <div *ngIf="errorMessage" class="error-message">
+          <span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;">error</span>
           {{errorMessage}}
         </div>
+
       </div><!-- /.builder-section (Visualize) -->
 
     </div><!-- /.builder-grid -->
 
     <!-- ── Chart area ──────────────────────────────────────────────────── -->
+    <!--
+      FIX: Pass the full yAxisFields array as [yAxis] AND [yAxisFields].
+      Previously [yAxis]="yAxisFields[0]" meant only the first channel's
+      data field was used by the Vega chart — channels 2, 3, etc. were invisible
+      because their yField names were never passed in.
+      Now [yAxis]="yAxisFields[0]" remains for single-channel backward compat,
+      but [yAxisFields]="yAxisFields" gives the chart all fields for multi-series.
+      Your VegaChart component should use yAxisFields when its length > 1.
+    -->
     <div class="query-results" style="margin-top:16px;">
       <div class="chart-area">
         <app-vega-chart
           [data]="chartData"
           [chartType]="chartType"
           [xAxis]="xAxisField"
-          [yAxis]="yAxisField"
+          [yAxis]="yAxisFields[0] || 'value'"
+          [yAxisFields]="yAxisFields"
           [title]="chartTitle">
         </app-vega-chart>
       </div>

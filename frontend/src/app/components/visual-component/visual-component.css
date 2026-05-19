@@ -1,214 +1,792 @@
+/* visual-builder.css - External stylesheet for Visual Builder component */
+/* Aligned checkbox dropdown + consistent color differentiation for multiple channels */
+
 .visual-container {
-	width: 100%;
+  width: 100%;
 }
 
 .page-header {
-	margin-bottom: 24px;
+  margin-bottom: 24px;
 }
 
 .page-title {
-	font-size: 28px;
-	font-weight: 700;
-	color: #0b1c30;
-	margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #0b1c30;
+  margin: 0 0 8px;
 }
 
 .page-description {
-	font-size: 14px;
-	color: #404750;
-	margin: 0;
+  font-size: 14px;
+  color: #404750;
+  margin: 0;
 }
 
+/* ── Connection status ───────────────────────────────────────────────────── */
+
 .connection-status {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 12px 16px;
-	background: #f0f9ff;
-	border-radius: 8px;
-	margin-bottom: 24px;
-	border: 1px solid #bae6fd;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  border: 1px solid #bae6fd;
 }
 
 .status-indicator {
-	width: 10px;
-	height: 10px;
-	border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }
 
 .status-indicator.connected {
-	background: #22c55e;
-	box-shadow: 0 0 0 2px #bbf7d0;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px #bbf7d0;
 }
 
 .connection-name {
-	font-weight: 600;
-	color: #0c4a6e;
+  font-weight: 600;
+  color: #0c4a6e;
 }
 
 .connection-detail {
-	font-size: 12px;
-	color: #64748b;
+  font-size: 12px;
+  color: #64748b;
 }
 
+/* ── No-connection warning ───────────────────────────────────────────────── */
+
 .no-connection-warning {
-	display: flex;
-	align-items: center;
-	gap: 16px;
-	padding: 20px;
-	background: #fef3c7;
-	border: 1px solid #fde68a;
-	border-radius: 12px;
-	margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  margin-bottom: 24px;
 }
 
 .no-connection-warning .material-symbols-outlined {
-	font-size: 32px;
-	color: #d97706;
+  font-size: 32px;
+  color: #d97706;
 }
 
 .no-connection-warning strong {
-	display: block;
-	margin-bottom: 4px;
-	color: #92400e;
+  display: block;
+  margin-bottom: 4px;
+  color: #92400e;
 }
 
 .no-connection-warning p {
-	margin: 0;
-	font-size: 14px;
-	color: #78350f;
+  margin: 0;
+  font-size: 14px;
+  color: #78350f;
 }
 
 .btn-connect {
-	margin-left: auto;
-	padding: 8px 16px;
-	background: #d97706;
-	color: white;
-	border: none;
-	border-radius: 6px;
-	cursor: pointer;
-	font-weight: 500;
+  margin-left: auto;
+  padding: 8px 16px;
+  background: #d97706;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
 }
 
+/* ── Builder card ────────────────────────────────────────────────────────── */
+
 .builder-card {
-	background: white;
-	border-radius: 12px;
-	border: 1px solid #e2e8f0;
-	overflow: hidden;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
 }
 
 .builder-grid {
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: 24px;
-	padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  padding: 16px;
 }
 
 .builder-section {
-	background: #f8fafc;
-	border-radius: 8px;
-	padding: 16px;
-	border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
 }
 
 .builder-section h4 {
-	font-size: 14px;
-	font-weight: 600;
-	margin: 0 0 16px;
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	color: #0f172a;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0f172a;
 }
 
 .builder-section h4 .material-symbols-outlined {
-	font-size: 18px;
-	color: #0ea5e9;
+  font-size: 18px;
+  color: #0ea5e9;
 }
+
+/* ── Form controls ───────────────────────────────────────────────────────── */
 
 .form-group {
-	margin-bottom: 16px;
+  margin-bottom: 16px;
 }
 
-.form-group label {
-	display: block;
-	font-size: 12px;
-	font-weight: 500;
-	color: #64748b;
-	margin-bottom: 6px;
+.form-group label,
+.value-col-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 6px;
 }
 
 .form-select {
-	width: 100%;
-	padding: 8px 12px;
-	border: 1px solid #e2e8f0;
-	border-radius: 6px;
-	font-size: 13px;
-	background: white;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
+  color: #0f172a;
+  transition: border-color 0.15s;
 }
 
-.form-select-sm {
-	padding: 6px 8px;
-	border: 1px solid #e2e8f0;
-	border-radius: 4px;
-	font-size: 12px;
-	background: white;
+.form-select:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 2px #e0f2fe;
 }
+
+.form-select:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* ── Hint / helper text ──────────────────────────────────────────────────── */
+
+.hint-text {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+/* ── Error message ───────────────────────────────────────────────────────── */
+
+.error-message {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #ef4444;
+  font-size: 13px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+/* ── Column buttons (value column picker) ────────────────────────────────── */
 
 .columns-list {
-	max-height: 250px;
-	overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 2px 0;
 }
 
-.column-item { padding: 6px 0; }
+.column-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.column-btn:hover {
+  background: #f0f9ff;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+.column-btn.active {
+  background: #0ea5e9;
+  border-color: #0ea5e9;
+  color: white;
+  box-shadow: 0 1px 4px rgba(14, 165, 233, 0.35);
+}
+
+.col-icon {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.column-btn.active .col-icon {
+  opacity: 1;
+}
+
+.columns-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.columns-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.columns-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* ── Available columns (non-node tables) ─────────────────────────────────── */
+
+.column-item {
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+  color: #334155;
+}
 
 .column-name {
-	flex: 1;
+  flex: 1;
 }
 
+/* ── Chart type buttons ──────────────────────────────────────────────────── */
+
 .chart-buttons {
-	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .chart-btn {
-	display: flex;
-	align-items: center;
-	gap: 4px;
-	padding: 6px 12px;
-	background: white;
-	border: 1px solid #e2e8f0;
-	border-radius: 6px;
-	cursor: pointer;
-	font-size: 12px;
-	transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #475569;
+  transition: all 0.15s;
 }
 
-.chart-btn:hover { background: #f1f5f9 }
-
-.chart-btn.active { background: #0ea5e9; border-color:#0ea5e9; color:white }
-
-.query-results { border-top: 1px solid #e2e8f0; padding: 20px 24px; }
-
-.preview { margin-top: 12px; background: #f7f7f7; padding: 8px; border-radius: 4px; }
-
-@media (max-width: 1024px) {
-	.builder-grid { grid-template-columns: 1fr; gap: 16px; }
+.chart-btn:hover {
+  background: #f1f5f9;
 }
+
+.chart-btn.active {
+  background: #0ea5e9;
+  border-color: #0ea5e9;
+  color: white;
+}
+
+/* ── Checkbox Dropdown (Aligned & Modern) ───────────────────────────────── */
+
+.channel-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.channel-dropdown-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  cursor: pointer;
+  user-select: none;
+}
+
+.trigger-text {
+  flex: 1;
+  text-align: left;
+  color: #1e293b;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trigger-chevron {
+  font-size: 20px;
+  color: #64748b;
+  transition: transform 0.2s;
+}
+
+.channel-dropdown.open .trigger-chevron {
+  transform: rotate(180deg);
+}
+
+.channel-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  max-height: 320px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.channel-dropdown-scroll {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.channel-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.channel-checkbox-row:hover {
+  background: #f8fafc;
+}
+
+.channel-cb {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #0ea5e9;
+}
+
+.cb-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+/* Colored badge in dropdown for selected channels */
+.cb-col-badge {
+  padding: 2px 10px;
+  border-radius: 30px;
+  font-size: 11px;
+  font-weight: 500;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Channel-specific badge colors */
+.channel-checkbox-row[data-channel-index="0"] .cb-col-badge { background: #1f77b4; color: white; }
+.channel-checkbox-row[data-channel-index="1"] .cb-col-badge { background: #ff7f0e; color: white; }
+.channel-checkbox-row[data-channel-index="2"] .cb-col-badge { background: #2ca02c; color: white; }
+.channel-checkbox-row[data-channel-index="3"] .cb-col-badge { background: #d62728; color: white; }
+.channel-checkbox-row[data-channel-index="4"] .cb-col-badge { background: #9467bd; color: white; }
+
+.cb-spinner {
+  font-size: 14px;
+  color: #0ea5e9;
+  animation: spin 0.8s linear infinite;
+}
+
+.cb-error {
+  color: #ef4444;
+  font-size: 12px;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.channel-dropdown-footer {
+  padding: 10px 12px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  gap: 16px;
+  background: #f9fafb;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: #0ea5e9;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+
+.link-btn:hover {
+  background: #e0f2fe;
+}
+
+.link-btn.danger {
+  color: #ef4444;
+}
+
+.link-btn.danger:hover {
+  background: #fef2f2;
+}
+
+.badge-count {
+  background: #0ea5e9;
+  color: white;
+  border-radius: 40px;
+  padding: 2px 8px;
+  font-size: 11px;
+  margin-left: 8px;
+}
+
+/* ── Channel column groups (per channel Y-axis picker) with color borders ── */
+
+.channel-col-group {
+  margin-top: 16px;
+  padding-top: 8px;
+  padding-left: 12px;
+  border-left: 3px solid;
+  border-radius: 4px;
+}
+
+.channel-col-group[data-channel-index="0"] { border-left-color: #1f77b4; }
+.channel-col-group[data-channel-index="1"] { border-left-color: #ff7f0e; }
+.channel-col-group[data-channel-index="2"] { border-left-color: #2ca02c; }
+.channel-col-group[data-channel-index="3"] { border-left-color: #d62728; }
+.channel-col-group[data-channel-index="4"] { border-left-color: #9467bd; }
+
+.channel-col-group:first-of-type {
+  margin-top: 0;
+}
+
+/* Channel-specific label colors */
+.channel-col-group[data-channel-index="0"] .value-col-label strong { color: #1f77b4; }
+.channel-col-group[data-channel-index="1"] .value-col-label strong { color: #ff7f0e; }
+.channel-col-group[data-channel-index="2"] .value-col-label strong { color: #2ca02c; }
+.channel-col-group[data-channel-index="3"] .value-col-label strong { color: #d62728; }
+.channel-col-group[data-channel-index="4"] .value-col-label strong { color: #9467bd; }
+
+/* ── Selection summary card with color dots for multiple channels ────────── */
+
+.selection-summary {
+  margin-top: 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 12px;
+}
+
+.summary-row:last-child {
+  border-bottom: none;
+}
+
+.summary-label {
+  color: #94a3b8;
+  font-weight: 500;
+  min-width: 70px;
+}
+
+.summary-value {
+  color: #334155;
+  font-weight: 500;
+  text-align: right;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-value.highlight {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+/* Summary value colors based on channel */
+.summary-row[data-channel-index="0"] .summary-value.highlight { background: #e3f2fd; color: #1f77b4; }
+.summary-row[data-channel-index="1"] .summary-value.highlight { background: #fff3e0; color: #ff7f0e; }
+.summary-row[data-channel-index="2"] .summary-value.highlight { background: #e8f5e9; color: #2ca02c; }
+.summary-row[data-channel-index="3"] .summary-value.highlight { background: #ffebee; color: #d62728; }
+.summary-row[data-channel-index="4"] .summary-value.highlight { background: #f3e5f5; color: #9467bd; }
+
+/* Color dots for visual distinction */
+.series-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 10px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* Distinct color palette for multiple channels */
+.series-dot[data-channel-index="0"] { background-color: #1f77b4; }
+.series-dot[data-channel-index="1"] { background-color: #ff7f0e; }
+.series-dot[data-channel-index="2"] { background-color: #2ca02c; }
+.series-dot[data-channel-index="3"] { background-color: #d62728; }
+.series-dot[data-channel-index="4"] { background-color: #9467bd; }
+.series-dot[data-channel-index="5"] { background-color: #8c564b; }
+.series-dot[data-channel-index="6"] { background-color: #e377c2; }
+.series-dot[data-channel-index="7"] { background-color: #7f7f7f; }
+.series-dot[data-channel-index="8"] { background-color: #bcbd22; }
+.series-dot[data-channel-index="9"] { background-color: #17becf; }
+
+/* Predefined color classes for specific channel names */
+.channel-color-channel-2 { background-color: #1f77b4; border-left: 3px solid #1f77b4; }
+.channel-color-channel-5 { background-color: #ff7f0e; border-left: 3px solid #ff7f0e; }
+.channel-color-channel-8 { background-color: #2ca02c; border-left: 3px solid #2ca02c; }
+
+/* Summary row with channel colors */
+.channel-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Y-axis multi-series indicator */
+.y-axis-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* ── Action buttons ──────────────────────────────────────────────────────── */
+
+.btn-primary {
+  padding: 8px 18px;
+  background: #0ea5e9;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #0284c7;
+}
+
+.btn-primary:disabled {
+  background: #bae6fd;
+  color: #7dd3fc;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  padding: 8px 18px;
+  background: white;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* ── Chart area - supports multiple channels with consistent colors ───────── */
+
+.query-results {
+  border-top: 1px solid #e2e8f0;
+  padding: 20px 24px;
+}
+
+.chart-area {
+  width: 100%;
+  min-height: 380px;
+}
+
+/* Vega chart custom styling for multi-color series */
+.chart-area .vega-embed {
+  width: 100%;
+}
+
+/* Chart legend styling for multiple channels - matching our color palette */
+.chart-area .vega-legend {
+  font-size: 11px;
+}
+
+/* Ensure legend colors match our palette */
+.chart-area .vega-legend-symbol {
+  stroke-width: 2px;
+}
+
+/* X-axis styling for CreatedAt timestamps */
+.chart-area .vega-axis path,
+.chart-area .vega-axis line {
+  stroke: #e2e8f0;
+}
+
+.chart-area .vega-axis text {
+  font-size: 10px;
+  fill: #64748b;
+}
+
+/* ── Vega chart color scheme override ────────────────────────────────────── */
+/* These styles ensure the chart uses the same color palette as the UI */
+
+.chart-area .vega-mark path[stroke="#1f77b4"],
+.chart-area .vega-mark path[stroke="#ff7f0e"],
+.chart-area .vega-mark path[stroke="#2ca02c"],
+.chart-area .vega-mark circle[fill="#1f77b4"],
+.chart-area .vega-mark circle[fill="#ff7f0e"],
+.chart-area .vega-mark circle[fill="#2ca02c"] {
+  transition: all 0.2s;
+}
+
+/* ── Node layout (legacy three-column layout kept) ───────────────────────── */
 
 .node-layout {
-	display: grid;
-	grid-template-columns: 1fr 1fr 1fr;
-	gap: 12px;
-	margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
 }
-.node-layout h5 { margin: 0 0 8px; font-size:14px; color:#0f172a }
-.node-layout ul { list-style: none; padding: 0; margin: 0; max-height: 240px; overflow-y: auto; border: 1px solid #e6eef6; border-radius:6px; background:#fff }
-.node-layout li { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
-.node-layout li:hover { background:#f8fafc }
-.node-layout li.selected { background:#0ea5e9; color:white }
+
+.node-layout h5 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.node-layout ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid #e6eef6;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.node-layout li {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+}
+
+.node-layout li:hover {
+  background: #f8fafc;
+}
+
+.node-layout li.selected {
+  background: #0ea5e9;
+  color: white;
+}
+
+/* ── Animation utilities ─────────────────────────────────────────────────── */
+
+.spin {
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .builder-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
 
 @media (max-width: 900px) {
-	.node-layout { grid-template-columns: 1fr; }
+  .node-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Add to vega-chart.css for better multi-axis display */
+:host {
+  display: block;
+  width: 100%;
+}
+
+.chart-container {
+  width: 100%;
+  min-height: 450px;
+  position: relative;
+}
+
+/* Ensure canvas renders properly */
+::ng-deep canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Style for tooltips */
+::ng-deep .vg-tooltip {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  border-radius: 4px;
+  padding: 8px 12px;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Style for axes labels */
+::ng-deep .axis-title {
+  font-weight: 500;
+  font-size: 12px;
+}
+
+::ng-deep .axis-label {
+  font-size: 11px;
 }

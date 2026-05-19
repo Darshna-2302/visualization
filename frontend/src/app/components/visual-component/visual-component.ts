@@ -1,40 +1,47 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ElementRef } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { DatabaseService } from '../../services/database.service';
 import { AuthService } from '../../services/auth';
-import { CommonModule, JsonPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { VegaChart } from '../vega-chart/vega-chart';
 
 interface Connection { id: number; name: string; }
 interface ChartTypeOption { value: string; label: string; }
+interface VegaDataPoint {
+  date: any;
+  value: number;
+  series: string;
+  channelId: any;
+}
 
-// ── Exact DB column names (PascalCase as defined in your MySQL schema) ─────
 const NODE_ID_COL      = 'NodeId';
 const NODE_NAME_COL    = 'NodeName';
 const SENSOR_ID_COL    = 'SensorId';
-const SENSOR_NAME_COL  = 'SensorName';   // last column in sensor table
-const SENSOR_NODE_FK   = 'NodeId';       // sensor.NodeId → node.NodeId
+const SENSOR_NAME_COL  = 'SensorName';
+const SENSOR_NODE_FK   = 'NodeId';
 const CHANNEL_ID_COL   = 'ChannelId';
 const CHANNEL_NAME_COL = 'ChannelName';
-const CHANNEL_SEN_FK   = 'SensorId';     // channel.SensorId → sensor.SensorId
-const CHANNEL_DATE_COL = 'RecordedAt';
+const CHANNEL_SEN_FK   = 'SensorId';
+const DETAIL_TABLE     = 'detail';
+const DETAIL_CHAN_FK   = 'ChannelId';
+const CHANNEL_DATE_COL = 'CreatedAt';
 const CHANNEL_VAL_COL  = 'Value';
 
-/**
- * Case-insensitive column accessor.
- * MySQL/.NET drivers sometimes return 'nodeid' instead of 'NodeId'.
- * This handles all casing variants so nothing breaks.
- */
+const EXCLUDE_COL_PATTERNS: RegExp[] = [
+  /id$/i, /name$/i, /^createdat$/i, /^updatedat$/i, /^recordedat$/i,
+  /^date$/i, /^time$/i, /description$/i, /^label$/i, /^type$/i,
+  /^status$/i, /^key$/i, /^code$/i, /^slug$/i, /^uuid$/i, /^guid$/i,
+];
+
 function getCol(row: any, colName: string): any {
   if (!row || !colName) return undefined;
-  if (row[colName] !== undefined) return row[colName];          // exact match
+  if (row[colName] !== undefined) return row[colName];
   const lower = colName.toLowerCase();
   const key = Object.keys(row).find(k => k.toLowerCase() === lower);
   return key !== undefined ? row[key] : undefined;
 }
 
-/** Safely normalise the table list returned by the API */
 function normaliseTables(raw: any): string[] {
   if (!raw) return [];
   const arr = Array.isArray(raw) ? raw : Object.keys(raw);
@@ -43,77 +50,108 @@ function normaliseTables(raw: any): string[] {
     .filter((t: string) => t.length > 0);
 }
 
+function isExcludedColumn(col: string): boolean {
+  return EXCLUDE_COL_PATTERNS.some(p => p.test(col));
+}
+
+export interface ChannelState {
+  id: any;
+  name: string;
+  checked: boolean;
+  columns: string[];
+  selectedColumn: string;
+  loading: boolean;
+  error: string;
+  /**
+   * FIX: Stable color index assigned once when the channel list loads.
+   * Previously the template used the *loop index i* which changes depending
+   * on whether you're iterating channelStates (all) or checkedChannels (subset).
+   * The same channel got different colors in the dropdown vs the Y-axis picker.
+   * Now every color lookup goes through ch.colorIndex, which never changes.
+   */
+  colorIndex: number;
+}
+
+export interface ChartSeries {
+  channelId: any;
+  channelName: string;
+  yField: string;
+  data: any[];
+}
+
 @Component({
   selector: 'app-visual-component',
-  imports: [CommonModule, FormsModule, JsonPipe, VegaChart],
+  imports: [CommonModule, FormsModule, VegaChart],
   templateUrl: './visual-component.html',
   styleUrls: ['./visual-component.css']
 })
 export class VisualMapperComponent implements OnInit, OnDestroy {
   private subscriptions: Subscription = new Subscription();
 
-  // ── Connection ────────────────────────────────────────────────────────────
   connections: Connection[] = [];
   selectedConnectionId: any = null;
-
-  // ── Tables ────────────────────────────────────────────────────────────────
+  chartData: VegaDataPoint[] = [];
   tables: string[] = [];
   selectedMainTable: string = '';
   columns: string[] = [];
 
-  // ── Node → Sensor → Channel cascade ─────────────────────────────────────
-  nodeValues: string[] = [];                              // NodeName list
-  selectedNodeValue: string = '';                         // chosen NodeName
-
+  nodeValues: string[] = [];
+  selectedNodeValue: string = '';
   relatedSensorsForNode: { id: any; name: string }[] = [];
-  selectedSensorNode: any = '';                           // chosen SensorId
+  selectedSensorNode: any = '';
+  channelStates: ChannelState[] = [];
 
-  filteredChannels: { id: any; name: string }[] = [];
-  selectedChannel: any = '';                              // chosen ChannelId
-
-  // ── Loading flags (guards "no data" messages against showing too early) ──
   loadingNodes    = false;
   loadingSensors  = false;
   loadingChannels = false;
 
-  // ── Chart ─────────────────────────────────────────────────────────────────
   chartTypes: ChartTypeOption[] = [
     { value: 'line',  label: 'Line Chart'   },
     { value: 'bar',   label: 'Bar Chart'    },
     { value: 'point', label: 'Scatter Plot' },
     { value: 'area',  label: 'Area Chart'   }
   ];
-  chartType: string  = 'line';
-  chartData: any[]   = [];
-  xAxisField: string = '';
-  yAxisField: string = '';
+  chartType: string = 'line';
+  chartSeries: ChartSeries[] = [];
+  yAxisFields: string[] = [];
+  xAxisField: string = CHANNEL_DATE_COL;
   chartTitle: string = '';
   errorMessage: string = '';
 
-  dateColumn: string  = '';
-  valueColumn: string = '';
+  public  nodeData:   any[] = [];
+  private sensorData: any[] = [];
 
-  // ── Raw data caches ───────────────────────────────────────────────────────
-  public  nodeData:    any[] = [];
-  private sensorData:  any[] = [];
-  private channelData: any[] = [];
+  channelDropdownOpen = false;
+
+  private readonly COLORS = [
+    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+    '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+  ];
+  private readonly LIGHT_COLORS = [
+    '#e3f2fd', '#fff3e0', '#e8f5e9', '#ffebee', '#f3e5f5',
+    '#efebe9', '#fce4ec', '#f5f5f5', '#f9fbe7', '#e0f7fa'
+  ];
 
   constructor(
     private dataService: DatabaseService,
-    private authService: AuthService
+    private authService: AuthService,
+    private elRef: ElementRef
   ) {}
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Lifecycle
-  // ─────────────────────────────────────────────────────────────────────────
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    if (this.channelDropdownOpen &&
+        !this.elRef.nativeElement.contains(event.target)) {
+      this.channelDropdownOpen = false;
+    }
+  }
 
   ngOnInit() {
     this.subscriptions.add(
       this.dataService.activeConnection$.subscribe(conn => {
         if (conn) {
-          this.connections        = [{ id: conn.id, name: conn.name }];
+          this.connections          = [{ id: conn.id, name: conn.name }];
           this.selectedConnectionId = conn.id;
-
           this.dataService.getTablesForConnection(conn.id).subscribe({
             next: (raw: any) => {
               this.tables = normaliseTables(raw);
@@ -132,6 +170,45 @@ export class VisualMapperComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() { this.subscriptions.unsubscribe(); }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Color helpers — accept colorIndex (from ch.colorIndex), not loop index i
+  // ─────────────────────────────────────────────────────────────────────────
+
+  getChannelColor(colorIndex: number): string {
+    return this.COLORS[colorIndex % this.COLORS.length];
+  }
+
+  getChannelColorLight(colorIndex: number): string {
+    return this.LIGHT_COLORS[colorIndex % this.LIGHT_COLORS.length];
+  }
+
+  getSensorName(sensorId: any): string {
+    return this.relatedSensorsForNode.find(s => String(s.id) === String(sensorId))?.name ?? String(sensorId);
+  }
+
+  get checkedChannels(): ChannelState[] {
+    return this.channelStates.filter(c => c.checked);
+  }
+
+  get checkedChannelCount(): number {
+    return this.channelStates.filter(c => c.checked).length;
+  }
+
+  get channelDropdownLabel(): string {
+    const n = this.checkedChannelCount;
+    if (n === 0) return '-- select channel(s) --';
+    if (n === 1) return this.checkedChannels[0].name;
+    return `${n} channels selected`;
+  }
+
+  toggleChannelDropdown() {
+    this.channelDropdownOpen = !this.channelDropdownOpen;
+  }
+
+  closeChannelDropdown() {
+    this.channelDropdownOpen = false;
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Table selection
@@ -156,7 +233,7 @@ export class VisualMapperComponent implements OnInit, OnDestroy {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Node → load node names into dropdown
+  // Node
   // ─────────────────────────────────────────────────────────────────────────
 
   private loadNodeData() {
@@ -166,11 +243,7 @@ export class VisualMapperComponent implements OnInit, OnDestroy {
     this.dataService.getTableData('node', this.selectedConnectionId).subscribe({
       next: (data: any) => {
         this.loadingNodes = false;
-        // Handle { data: [] }, { rows: [] }, or plain []
-        this.nodeData = Array.isArray(data)
-          ? data
-          : (data?.rows ?? data?.data ?? []);
-
+        this.nodeData = Array.isArray(data) ? data : (data?.rows ?? data?.data ?? []);
         this.nodeValues = [
           ...new Set(
             this.nodeData
@@ -178,13 +251,6 @@ export class VisualMapperComponent implements OnInit, OnDestroy {
               .filter(v => v != null && v !== '')
           )
         ] as string[];
-
-        if (this.nodeValues.length === 0) {
-          console.warn(
-            `[VisualBuilder] No values found for column "${NODE_NAME_COL}". ` +
-            `Keys in first row:`, Object.keys(this.nodeData[0] ?? {})
-          );
-        }
       },
       error: (err) => {
         this.loadingNodes = false;
@@ -194,165 +260,268 @@ export class VisualMapperComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Node selected → load its sensors
-  // ─────────────────────────────────────────────────────────────────────────
-
   onSelectedNodeInstanceChange() {
-    // Reset all downstream state
     this.selectedSensorNode    = '';
-    this.selectedChannel       = '';
+    this.channelStates         = [];
     this.relatedSensorsForNode = [];
-    this.filteredChannels      = [];
+    this.chartSeries           = [];
     this.chartData             = [];
     this.errorMessage          = '';
-    this.loadingSensors        = false;
-    this.loadingChannels       = false;
 
     if (!this.selectedNodeValue || !this.selectedConnectionId) return;
 
-    // Resolve NodeId from the cached node list
     const nodeRow = this.nodeData.find(
       r => String(getCol(r, NODE_NAME_COL)) === String(this.selectedNodeValue)
     );
     const nodeId = nodeRow ? getCol(nodeRow, NODE_ID_COL) : null;
 
     if (nodeId == null) {
-      this.errorMessage =
-        `Could not resolve NodeId for "${this.selectedNodeValue}". ` +
-        `Check NODE_ID_COL constant matches your DB column name.`;
-      console.warn('[VisualBuilder] nodeData sample:', this.nodeData[0]);
+      this.errorMessage = `Could not resolve NodeId for "${this.selectedNodeValue}".`;
       return;
     }
 
-    // ── Fetch sensors where sensor.NodeId = nodeId ────────────────────────
-    this.loadingSensors = true;   // ← set BEFORE request so template shows "Loading sensors..."
-
+    this.loadingSensors = true;
     this.dataService.getRowsByColumnValue(
       'sensor', SENSOR_NODE_FK, String(nodeId), this.selectedConnectionId
     ).subscribe({
       next: (rows: any) => {
-        this.loadingSensors = false;  // ← clear AFTER response
+        this.loadingSensors = false;
         this.sensorData = Array.isArray(rows) ? rows : [];
-
         this.relatedSensorsForNode = this.sensorData
           .map(s => ({
             id:   getCol(s, SENSOR_ID_COL),
             name: getCol(s, SENSOR_NAME_COL) ?? `Sensor ${getCol(s, SENSOR_ID_COL)}`
           }))
           .filter(s => s.id != null);
-
-        if (this.relatedSensorsForNode.length === 0) {
-          console.warn(
-            `[VisualBuilder] No sensors for NodeId=${nodeId} via column "${SENSOR_NODE_FK}". ` +
-            `Keys in first sensor row:`, Object.keys(this.sensorData[0] ?? {})
-          );
-        }
       },
       error: (err) => {
         this.loadingSensors = false;
-        console.error('Error loading sensors:', err);
         this.relatedSensorsForNode = [];
       }
     });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Sensor selected → load its channels
+  // Sensor → load channels
+  // FIX: Assign stable colorIndex to each channel at load time.
   // ─────────────────────────────────────────────────────────────────────────
 
   onSelectedSensorNodeChange() {
-    // Reset downstream
-    this.selectedChannel  = '';
-    this.filteredChannels = [];
-    this.chartData        = [];
-    this.errorMessage     = '';
-    this.loadingChannels  = false;
+    this.channelStates = [];
+    this.chartSeries   = [];
+    this.chartData     = [];
+    this.errorMessage  = '';
 
     if (!this.selectedSensorNode || !this.selectedConnectionId) return;
 
-    // ── Fetch channels where channel.SensorId = selectedSensorNode ────────
-    this.loadingChannels = true;  // ← set BEFORE request
-
+    this.loadingChannels = true;
     this.dataService.getRowsByColumnValue(
       'channel', CHANNEL_SEN_FK, String(this.selectedSensorNode), this.selectedConnectionId
     ).subscribe({
       next: (rows: any) => {
-        this.loadingChannels = false;   // ← clear AFTER response
-        this.channelData = Array.isArray(rows) ? rows : [];
-
+        this.loadingChannels = false;
+        const channelRows = Array.isArray(rows) ? rows : [];
         const seen = new Set<string>();
-        this.filteredChannels = this.channelData
+        let colorIdx = 0;
+
+        this.channelStates = channelRows
+          .map(ch => ({
+            id:             getCol(ch, CHANNEL_ID_COL),
+            name:           getCol(ch, CHANNEL_NAME_COL) ?? `Channel ${getCol(ch, CHANNEL_ID_COL)}`,
+            checked:        false,
+            columns:        [],
+            selectedColumn: '',
+            loading:        false,
+            error:          '',
+            colorIndex:     -1  // will be set after dedup
+          }))
           .filter(ch => {
-            const key = String(getCol(ch, CHANNEL_ID_COL));
+            if (ch.id == null) return false;
+            const key = String(ch.name).trim().toLowerCase();
             if (seen.has(key)) return false;
             seen.add(key);
             return true;
           })
-          .map(ch => ({
-            id:   getCol(ch, CHANNEL_ID_COL),
-            name: getCol(ch, CHANNEL_NAME_COL) ?? `Channel ${getCol(ch, CHANNEL_ID_COL)}`
-          }))
-          .filter(ch => ch.id != null);
-
-        if (this.filteredChannels.length === 0) {
-          console.warn(
-            `[VisualBuilder] No channels for SensorId=${this.selectedSensorNode} ` +
-            `via column "${CHANNEL_SEN_FK}". ` +
-            `Keys in first channel row:`, Object.keys(this.channelData[0] ?? {})
-          );
-        }
+          .map(ch => ({ ...ch, colorIndex: colorIdx++ }));
       },
       error: (err) => {
         this.loadingChannels = false;
-        console.error('Error loading channels:', err);
-        this.filteredChannels = [];
+        this.channelStates   = [];
       }
     });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Channel selected → build chart data from cache
+  // Channel checkbox toggled
   // ─────────────────────────────────────────────────────────────────────────
 
-  onSelectedChannelChange() {
-    this.chartData    = [];
-    this.errorMessage = '';
-    if (!this.selectedChannel) return;
+  onChannelToggle(state: ChannelState, event: Event) {
+    const isChecked = (event.target as HTMLInputElement).checked;
+    state.checked = isChecked;
 
-    // Filter the already-cached channelData — no extra HTTP call needed.
-    // Use String() comparison to handle number/string type mismatch.
-    const rows = this.channelData.filter(
-      ch => String(getCol(ch, CHANNEL_ID_COL)) === String(this.selectedChannel)
-    );
+    if (state.checked) {
+      if (state.columns.length === 0 && !state.loading) {
+        // First selection: load columns + data, then build series
+        this.loadChannelColumns(state);
+      } else if (state.columns.length > 0) {
+        // FIX: Re-checking a previously unchecked channel.
+        // rebuildChartFromStates() alone won't work here because the series
+        // was removed from chartSeries when the channel was unchecked.
+        // We must re-fetch the data and re-add the series.
+        this.reloadSeriesForChannel(state);
+      }
+    } else {
+      this.rebuildChartFromStates();
+    }
+  }
 
-    if (!rows.length) {
-      this.errorMessage = 'No data found for selected channel.';
-      return;
+  // ─────────────────────────────────────────────────────────────────────────
+  // FIX: Reload series for a channel whose columns are already known but whose
+  // series was removed from chartSeries when it was unchecked.
+  // ─────────────────────────────────────────────────────────────────────────
+  private reloadSeriesForChannel(state: ChannelState) {
+    state.loading = true;
+    state.error   = '';
+
+    this.dataService.getRowsByColumnValue(
+      DETAIL_TABLE, DETAIL_CHAN_FK, String(state.id), this.selectedConnectionId
+    ).subscribe({
+      next: (rows: any) => {
+        state.loading = false;
+        const detailRows = Array.isArray(rows) ? rows : [];
+        if (!detailRows.length) {
+          state.error = 'No data in detail table for this channel.';
+          return;
+        }
+        this.buildSeriesForChannel(state, detailRows);
+      },
+      error: (err) => {
+        state.loading = false;
+        state.error   = 'Failed to load detail data.';
+      }
+    });
+  }
+
+  private loadChannelColumns(state: ChannelState) {
+    state.loading = true;
+    state.error   = '';
+
+    this.dataService.getRowsByColumnValue(
+      DETAIL_TABLE, DETAIL_CHAN_FK, String(state.id), this.selectedConnectionId
+    ).subscribe({
+      next: (rows: any) => {
+        state.loading = false;
+        const detailRows = Array.isArray(rows) ? rows : [];
+
+        if (!detailRows.length) {
+          state.error = 'No data in detail table for this channel.';
+          return;
+        }
+
+        const allCols = Object.keys(detailRows[0]);
+        const sample  = detailRows.slice(0, 50);
+
+        let cols = allCols.filter(col => {
+          if (isExcludedColumn(col)) return false;
+          return sample.some(r => {
+            const v = r[col];
+            if (v === null || v === undefined || v === '') return false;
+            const num = Number(v);
+            return !isNaN(num) && isFinite(num);
+          });
+        });
+
+        if (cols.length === 0) {
+          cols = allCols.filter(col => !isExcludedColumn(col));
+        }
+
+        state.columns        = cols;
+        state.selectedColumn = cols.find(c => c.toLowerCase() === CHANNEL_VAL_COL.toLowerCase()) ?? cols[0] ?? '';
+
+        this.buildSeriesForChannel(state, detailRows);
+      },
+      error: (err) => {
+        state.loading = false;
+        state.error   = 'Failed to load detail data.';
+        console.error('[VisualBuilder] loadChannelColumns error', err);
+      }
+    });
+  }
+
+  onChannelColumnChange(state: ChannelState) {
+    if (!state.checked || !state.selectedColumn) return;
+
+    state.loading = true;
+    this.dataService.getRowsByColumnValue(
+      DETAIL_TABLE, DETAIL_CHAN_FK, String(state.id), this.selectedConnectionId
+    ).subscribe({
+      next: (rows: any) => {
+        state.loading = false;
+        const detailRows = Array.isArray(rows) ? rows : [];
+        this.buildSeriesForChannel(state, detailRows);
+      },
+      error: (err) => {
+        state.loading = false;
+        state.error   = 'Failed to reload detail data.';
+      }
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Series / chart building
+  // ─────────────────────────────────────────────────────────────────────────
+
+  private buildSeriesForChannel(state: ChannelState, detailRows: any[]) {
+    const col = state.selectedColumn;
+    const series: ChartSeries = {
+      channelId:   state.id,
+      channelName: state.name,
+      yField:      col,
+      data: detailRows
+        .map(r => ({
+          [CHANNEL_DATE_COL]: getCol(r, CHANNEL_DATE_COL),
+          value:              Number(getCol(r, col)),
+          series:             state.name
+        }))
+        .filter(r => r[CHANNEL_DATE_COL] != null && !isNaN(r['value']))
+    };
+
+    const idx = this.chartSeries.findIndex(s => String(s.channelId) === String(state.id));
+    if (idx >= 0) {
+      this.chartSeries[idx] = series;
+    } else {
+      this.chartSeries.push(series);
     }
 
-    this.dateColumn  = CHANNEL_DATE_COL;
-    this.valueColumn = CHANNEL_VAL_COL;
+    this.rebuildChartFromStates();
+  }
 
-    this.chartData = rows
-      .map(r => ({
-        [CHANNEL_DATE_COL]: getCol(r, CHANNEL_DATE_COL),
-        [CHANNEL_VAL_COL]:  Number(getCol(r, CHANNEL_VAL_COL))
-      }))
-      .filter(r => r[CHANNEL_DATE_COL] != null && !isNaN(r[CHANNEL_VAL_COL]));
+  private rebuildChartFromStates() {
+    const checkedIds = new Set(this.checkedChannels.map(c => String(c.id)));
+    this.chartSeries = this.chartSeries.filter(s => checkedIds.has(String(s.channelId)));
 
-    this.xAxisField = CHANNEL_DATE_COL;
-    this.yAxisField = CHANNEL_VAL_COL;
+    this.chartData = this.chartSeries.flatMap(s => {
+      const ch = this.channelStates.find(c => String(c.id) === String(s.channelId));
+      return s.data.map(row => ({
+        ...row,
+        _series:     s.channelName,
+        _yField:     s.yField,
+        _colorIndex: ch?.colorIndex ?? 0,
+        value:       row.value !== undefined ? row.value : row[s.yField]
+      }));
+    });
 
-    const sensorLabel = this.relatedSensorsForNode.find(
-      s => String(s.id) === String(this.selectedSensorNode)
-    )?.name ?? String(this.selectedSensorNode);
+    // All unique y-fields across all active series.
+    // The HTML passes the full yAxisFields array to the chart (not just [0]).
+    this.yAxisFields = [...new Set(this.chartSeries.map(s => s.yField))];
+    this.xAxisField  = CHANNEL_DATE_COL;
 
-    const channelLabel = this.filteredChannels.find(
-      c => String(c.id) === String(this.selectedChannel)
-    )?.name ?? String(this.selectedChannel);
+    const sensorLabel = this.getSensorName(this.selectedSensorNode);
+    const channelList = this.checkedChannels.map(c => c.name).join(', ');
+    this.chartTitle   = channelList
+      ? `${this.selectedNodeValue} › ${sensorLabel} › ${channelList}`
+      : 'Multi-Channel Chart';
 
-    this.chartTitle   = `${this.selectedNodeValue} › ${sensorLabel} › ${channelLabel}`;
     this.errorMessage = '';
 
     if (this.isVisualizationReady()) this.loadAndVisualize();
@@ -363,26 +532,15 @@ export class VisualMapperComponent implements OnInit, OnDestroy {
   // ─────────────────────────────────────────────────────────────────────────
 
   isVisualizationReady(): boolean {
-    if (this.selectedMainTable.toLowerCase() === 'node') {
-      return !!(this.selectedConnectionId && this.chartData?.length > 0);
-    }
-    return !!(
-      this.selectedConnectionId &&
-      this.selectedMainTable &&
-      this.dateColumn &&
-      this.valueColumn
-    );
+    return !!(this.selectedConnectionId && this.chartData?.length > 0);
   }
 
   loadAndVisualize() {
     if (!this.isVisualizationReady()) {
-      this.errorMessage = 'Please complete all selections before loading.';
+      this.errorMessage = 'Please select at least one channel with data.';
       return;
     }
     this.errorMessage = '';
-    // chartData already populated by onSelectedChannelChange; just confirm axis fields
-    this.xAxisField = this.dateColumn  || CHANNEL_DATE_COL;
-    this.yAxisField = this.valueColumn || CHANNEL_VAL_COL;
   }
 
   buildVisualization(): any {
@@ -391,11 +549,35 @@ export class VisualMapperComponent implements OnInit, OnDestroy {
       mainTable:    this.selectedMainTable,
       node:         this.selectedNodeValue,
       sensorId:     this.selectedSensorNode,
-      channelId:    this.selectedChannel,
-      dateColumn:   this.dateColumn,
-      valueColumn:  this.valueColumn,
+      channels:     this.checkedChannels.map(c => ({ id: c.id, name: c.name, column: c.selectedColumn })),
       chartType:    this.chartType
     };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FIX: selectAllChannels — removed the premature rebuildChartFromStates()
+  // call that ran before any async data loaded, giving an empty chart.
+  // Each async callback (loadChannelColumns / reloadSeriesForChannel) already
+  // calls rebuildChartFromStates() when its data arrives.
+  // ─────────────────────────────────────────────────────────────────────────
+  selectAllChannels() {
+    this.channelStates.forEach(c => {
+      if (!c.checked) {
+        c.checked = true;
+        if (c.columns.length === 0 && !c.loading) {
+          this.loadChannelColumns(c);
+        } else if (c.columns.length > 0) {
+          this.reloadSeriesForChannel(c);
+        }
+      }
+    });
+    // No rebuildChartFromStates() here — fires from each async callback
+  }
+
+  clearAllChannels() {
+    this.channelStates.forEach(c => { c.checked = false; });
+    this.chartSeries = [];
+    this.rebuildChartFromStates();
   }
 
   resetSelections() { this.resetAllSelections(); }
@@ -411,17 +593,16 @@ export class VisualMapperComponent implements OnInit, OnDestroy {
     this.selectedNodeValue     = '';
     this.relatedSensorsForNode = [];
     this.selectedSensorNode    = '';
-    this.filteredChannels      = [];
-    this.selectedChannel       = '';
-    this.dateColumn            = '';
-    this.valueColumn           = '';
+    this.channelStates         = [];
+    this.chartSeries           = [];
     this.chartData             = [];
+    this.yAxisFields           = [];
     this.errorMessage          = '';
     this.nodeData              = [];
     this.sensorData            = [];
-    this.channelData           = [];
     this.loadingNodes          = false;
     this.loadingSensors        = false;
     this.loadingChannels       = false;
+    this.channelDropdownOpen   = false;
   }
 }
